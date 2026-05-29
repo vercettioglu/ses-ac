@@ -133,6 +133,19 @@ export default function PanelNewAnnouncementPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Yeni Duyuru</h1>
 
+      {role === 'SENDER' && (
+        <p className="text-sm text-muted-foreground">
+          {session?.parent ? (
+            <>
+              Bağlı olduğunuz il yöneticisi:{' '}
+              <span className="font-medium text-foreground">{session.parent.name}</span>
+            </>
+          ) : (
+            'Henüz bir il yöneticisine bağlı değilsiniz.'
+          )}
+        </p>
+      )}
+
       {result && (
         <Card className="border-emerald-200 bg-emerald-50 p-4">
           <div className="flex items-center gap-2 font-semibold text-emerald-700">

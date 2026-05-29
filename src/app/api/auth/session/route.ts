@@ -13,7 +13,7 @@ export async function GET() {
 
     const actor = await prisma.adminUser.findUnique({
       where: { id: session.sub },
-      include: { permissions: true },
+      include: { permissions: true, parent: { select: { id: true, name: true } } },
     });
     if (!actor || !actor.isActive) return ok({ authenticated: false });
 
@@ -21,6 +21,7 @@ export async function GET() {
       authenticated: true,
       user: { id: actor.id, name: actor.name, email: actor.email, role: actor.role },
       permissions: actor.permissions.map((p) => ({ city: p.city, district: p.district })),
+      parent: actor.parent ?? null,
     });
   } catch (err) {
     return handleError(err);

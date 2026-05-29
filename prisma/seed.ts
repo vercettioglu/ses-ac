@@ -79,7 +79,12 @@ async function main() {
     senderType: 'ORGANIZATION',
     permissions: [{ city: 'Antalya', district: 'Konyaaltı' }],
   });
-  console.log('  ✓ 3 hesap (SUPER_ADMIN, REGION_ADMIN, SENDER)');
+  // Hiyerarşi: Konyaaltı göndericisi, Antalya bölge yöneticisine bağlı
+  await prisma.adminUser.update({
+    where: { id: sender.id },
+    data: { parentId: regionAdmin.id },
+  });
+  console.log('  ✓ 3 hesap (SUPER_ADMIN, REGION_ADMIN, SENDER) + hiyerarşi');
 
   // ---- Örnek kullanıcılar (yalnızca boşsa) ----
   const userCount = await prisma.user.count();

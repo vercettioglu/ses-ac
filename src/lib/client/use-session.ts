@@ -10,6 +10,7 @@ export type SessionInfo = {
   authenticated: boolean;
   user?: { id: string; name: string; email: string; role: Role };
   permissions?: SessionPermission[];
+  parent?: { id: string; name: string } | null;
 };
 
 export function useSession() {

@@ -18,6 +18,7 @@ type Sender = {
   role: Role;
   isActive: boolean;
   permissions: (Permission & { id: string })[];
+  parent: { id: string; name: string } | null;
 };
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -172,6 +173,15 @@ export default function SendersPage() {
                     ))
                   )}
                 </div>
+                {s.role === 'SENDER' && (
+                  <div className="mt-1.5 text-xs text-muted-foreground">
+                    {s.parent ? (
+                      <>Bağlı il yöneticisi: <span className="font-medium text-foreground">{s.parent.name}</span></>
+                    ) : (
+                      'Bağlı il yöneticisi yok (doğrudan yönetimde)'
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 flex-col gap-2">
                 <Button variant="outline" size="sm" onClick={() => setEditing(s)}>

@@ -109,12 +109,18 @@ model AdminUser {
   passwordHash String
   role         Role       @default(SENDER)
   isActive     Boolean    @default(true)
+  // Hiyerarşi: bir SENDER, ilinin bölge yöneticisine (REGION_ADMIN) bağlıdır.
+  parentId     String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
+  parent        AdminUser?         @relation("AdminHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children      AdminUser[]        @relation("AdminHierarchy")
   permissions   SenderPermission[]
   announcements Announcement[]
   auditLogs     AuditLog[]
+
+  @@index([parentId])
 }
 
 // ---- Göndericinin yetkili olduğu bölgeler ----

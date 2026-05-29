@@ -3,6 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { ok, fail, handleError, assertSameOrigin } from '@/lib/http';
 import { senderUpdateSchema } from '@/lib/validation';
 import { requireSession, loadActor, hashPassword, canManageRegion } from '@/lib/auth';
+import {
+  assertSingleRegionAdminPerCity,
+  parentIdForSenderCities,
+  attachOrphanSendersToRegionAdmin,
+} from '@/lib/admin-hierarchy';
 import { logAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -17,6 +22,7 @@ const senderSelect = {
   isActive: true,
   createdAt: true,
   permissions: { select: { id: true, city: true, district: true } },
+  parent: { select: { id: true, name: true } },
 } as const;
 
 // Gönderici hesabını güncelle: pasifleştir, rol/şifre/bölge değiştir.
@@ -67,15 +73,45 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (data.role && actor.role === 'SUPER_ADMIN') updateData.role = data.role;
     if (data.password) updateData.passwordHash = await hashPassword(data.password);
 
+    // Güncelleme sonrası geçerli rol
+    const effectiveRole = data.role && actor.role === 'SUPER_ADMIN' ? data.role : target.role;
+
+    // Bölge yetkileri ve hiyerarşi (yalnızca permissions gönderildiyse)
+    let newPermissions: { city: string; district: string | null }[] | null = null;
+    let cities: string[] = [];
+    if (data.permissions) {
+      if (effectiveRole === 'REGION_ADMIN') {
+        // İl geneli zorunlu + il başına 1 bölge yöneticisi
+        newPermissions = Array.from(new Set(data.permissions.map((p) => p.city))).map((city) => ({
+          city,
+          district: null,
+        }));
+        cities = newPermissions.map((p) => p.city);
+        await assertSingleRegionAdminPerCity(cities, target.id);
+        updateData.parentId = null;
+      } else if (effectiveRole === 'SENDER') {
+        newPermissions = data.permissions.map((p) => ({
+          city: p.city,
+          district: p.district && p.district.trim() ? p.district.trim() : null,
+        }));
+        cities = newPermissions.map((p) => p.city);
+        updateData.parentId = await parentIdForSenderCities(cities);
+      } else {
+        // SUPER_ADMIN: yetki yok
+        newPermissions = [];
+        updateData.parentId = null;
+      }
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
-      if (data.permissions) {
+      if (newPermissions) {
         await tx.senderPermission.deleteMany({ where: { adminUserId: target.id } });
-        if (data.permissions.length > 0) {
+        if (newPermissions.length > 0) {
           await tx.senderPermission.createMany({
-            data: data.permissions.map((p) => ({
+            data: newPermissions.map((p) => ({
               adminUserId: target.id,
               city: p.city,
-              district: p.district && p.district.trim() ? p.district.trim() : null,
+              district: p.district,
             })),
           });
         }
@@ -86,6 +122,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         select: senderSelect,
       });
     });
+
+    // Bölge yöneticisi olduysa, illerindeki sahipsiz göndericileri bağla
+    if (newPermissions && effectiveRole === 'REGION_ADMIN') {
+      await attachOrphanSendersToRegionAdmin(cities, target.id);
+    }
 
     await logAudit({
       actorId: actor.id,

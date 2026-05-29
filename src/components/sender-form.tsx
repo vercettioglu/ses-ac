@@ -26,7 +26,7 @@ export type SenderFormValues = {
 
 const ROLE_LABEL: Record<Role, string> = {
   SUPER_ADMIN: 'Süper Yönetici',
-  REGION_ADMIN: 'Bölge Yöneticisi (aynı zamanda gönderici)',
+  REGION_ADMIN: 'Bölge Yöneticisi',
   SENDER: 'Gönderici',
 };
 
@@ -82,6 +82,14 @@ export function SenderForm({
 
   function addPermission() {
     if (!rowCity) return;
+    // Bölge yöneticisi her zaman il geneli (ilçe yok)
+    if (role === 'REGION_ADMIN') {
+      if (perms.some((p) => p.city === rowCity && p.district == null)) return;
+      setPerms([...perms, { city: rowCity, district: null }]);
+      setRowCity('');
+      setLocalErr(null);
+      return;
+    }
     const district = rowDistrict.trim() ? rowDistrict.trim() : null;
     if (!district && !canPickWholeCity) {
       setLocalErr('Bu il için il geneli yetkiniz yok; bir ilçe seçin.');
@@ -191,7 +199,9 @@ export function SenderForm({
         <div>
           <Label>Bölge yetkileri</Label>
           <p className="mb-2 text-sm text-muted-foreground">
-            İl seçip ilçe bırakırsanız “il geneli” yetki verilir.
+            {role === 'REGION_ADMIN'
+              ? 'Bölge yöneticisi her zaman il geneli yetkilidir; yalnızca il seçin. Her il için en fazla bir bölge yöneticisi olabilir.'
+              : 'İl seçip ilçe bırakırsanız “il geneli” yetki verilir.'}
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[150px] flex-1">
@@ -205,29 +215,31 @@ export function SenderForm({
                 }}
               />
             </div>
-            <div className="min-w-[150px] flex-1">
-              {hasDistrictData(rowCity) && allowedDistricts.length > 0 ? (
-                <Select
-                  value={rowDistrict}
-                  onChange={(e) => setRowDistrict(e.target.value)}
-                  disabled={!rowCity}
-                >
-                  <option value="">{canPickWholeCity ? 'İl geneli' : 'İlçe seçin'}</option>
-                  {allowedDistricts.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </Select>
-              ) : (
-                <Input
-                  placeholder={canPickWholeCity ? 'İlçe (boş = il geneli)' : 'İlçe adı'}
-                  value={rowDistrict}
-                  onChange={(e) => setRowDistrict(e.target.value)}
-                  disabled={!rowCity}
-                />
-              )}
-            </div>
+            {role !== 'REGION_ADMIN' && (
+              <div className="min-w-[150px] flex-1">
+                {hasDistrictData(rowCity) && allowedDistricts.length > 0 ? (
+                  <Select
+                    value={rowDistrict}
+                    onChange={(e) => setRowDistrict(e.target.value)}
+                    disabled={!rowCity}
+                  >
+                    <option value="">{canPickWholeCity ? 'İl geneli' : 'İlçe seçin'}</option>
+                    {allowedDistricts.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Input
+                    placeholder={canPickWholeCity ? 'İlçe (boş = il geneli)' : 'İlçe adı'}
+                    value={rowDistrict}
+                    onChange={(e) => setRowDistrict(e.target.value)}
+                    disabled={!rowCity}
+                  />
+                )}
+              </div>
+            )}
             <Button type="button" variant="outline" onClick={addPermission} disabled={!rowCity}>
               <Plus className="h-4 w-4" />
               Ekle

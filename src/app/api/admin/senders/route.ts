@@ -3,6 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { ok, fail, handleError, assertSameOrigin } from '@/lib/http';
 import { senderCreateSchema } from '@/lib/validation';
 import { requireSession, loadActor, hashPassword, canManageRegion } from '@/lib/auth';
+import {
+  assertSingleRegionAdminPerCity,
+  parentIdForSenderCities,
+  attachOrphanSendersToRegionAdmin,
+} from '@/lib/admin-hierarchy';
 import { logAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -17,6 +22,7 @@ const senderSelect = {
   isActive: true,
   createdAt: true,
   permissions: { select: { id: true, city: true, district: true } },
+  parent: { select: { id: true, name: true } },
 } as const;
 
 // Gönderici/yönetici hesaplarını listele.
@@ -76,6 +82,23 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.adminUser.findUnique({ where: { email } });
     if (existing) return fail('Bu e-posta zaten kayıtlı', 409);
 
+    // Bölge yöneticisi her zaman il geneli (ilçe yok) ve il başına en fazla 1 tane
+    const isRegionAdmin = data.role === 'REGION_ADMIN';
+    const permissions = isRegionAdmin
+      ? Array.from(new Set(data.permissions.map((p) => p.city))).map((city) => ({ city, district: null as string | null }))
+      : data.permissions.map((p) => ({
+          city: p.city,
+          district: p.district && p.district.trim() ? p.district.trim() : null,
+        }));
+    const cities = permissions.map((p) => p.city);
+
+    if (isRegionAdmin) {
+      await assertSingleRegionAdminPerCity(cities);
+    }
+
+    // Gönderici, ilinin bölge yöneticisine bağlanır
+    const parentId = data.role === 'SENDER' ? await parentIdForSenderCities(cities) : null;
+
     const passwordHash = await hashPassword(data.password);
     const sender = await prisma.adminUser.create({
       data: {
@@ -84,15 +107,16 @@ export async function POST(req: NextRequest) {
         email,
         passwordHash,
         role: data.role,
-        permissions: {
-          create: data.permissions.map((p) => ({
-            city: p.city,
-            district: p.district && p.district.trim() ? p.district.trim() : null,
-          })),
-        },
+        parentId,
+        permissions: { create: permissions },
       },
       select: senderSelect,
     });
+
+    // Yeni bölge yöneticisi → o ildeki sahipsiz göndericileri ona bağla
+    if (isRegionAdmin) {
+      await attachOrphanSendersToRegionAdmin(cities, sender.id);
+    }
 
     await logAudit({
       actorId: actor.id,
