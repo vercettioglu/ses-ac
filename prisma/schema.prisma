@@ -30,6 +30,12 @@ enum SenderType {
   ORGANIZATION // tüzel kişi / kurum
 }
 
+enum Gender {
+  FEMALE // Kadın
+  MALE // Erkek
+  UNSPECIFIED // Belirtmek istemiyor
+}
+
 enum DeliveryStatus {
   pending
   sent
@@ -39,9 +45,12 @@ enum DeliveryStatus {
 // ---- Son kullanıcı (takipçi) ----
 
 model User {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String? // Üye olmayan kullanıcılarda boş olabilir
-  contact         String? // E-posta veya telefon (opsiyonel, doğrulamasız)
+  contact         String? // Cep telefonu (TR formatında, opsiyonel, doğrulamasız)
+  age             Int? // Yaş (opsiyonel)
+  gender          Gender? // Cinsiyet (opsiyonel)
+  occupation      String? // Meslek (opsiyonel)
   city            String
   district        String?
   wantsNational   Boolean   @default(false)

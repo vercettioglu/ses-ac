@@ -1,10 +1,15 @@
 // Üye olmayan kullanıcıların seçimleri localStorage'de tutulur.
 // Üye olunca da aynı kayıt zenginleşir (ad/iletişim eklenir).
 
+export type Gender = 'FEMALE' | 'MALE' | 'UNSPECIFIED';
+
 export type LocalUser = {
   userId?: string;
   name?: string;
-  contact?: string;
+  contact?: string; // cep telefonu (TR)
+  age?: number | null;
+  gender?: Gender | null;
+  occupation?: string | null;
   city?: string;
   district?: string | null;
   wantsNational: boolean;

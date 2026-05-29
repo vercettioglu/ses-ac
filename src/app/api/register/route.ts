@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ok, handleError, assertSameOrigin } from '@/lib/http';
 import { registerSchema } from '@/lib/validation';
+import { normalizeTrMobile } from '@/lib/phone';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,37 +15,35 @@ export async function POST(req: NextRequest) {
     const data = registerSchema.parse(await req.json());
     const district = data.district && data.district.trim() ? data.district.trim() : null;
     const name = data.name && data.name.trim() ? data.name.trim() : null;
-    const contact = data.contact && data.contact.trim() ? data.contact.trim() : null;
+    // contact yalnızca TR cep telefonu (zod doğruladı) → kanonik forma normalize et
+    const phone = data.contact && data.contact.trim() ? normalizeTrMobile(data.contact.trim()) : null;
+    const occupation = data.occupation && data.occupation.trim() ? data.occupation.trim() : null;
+    const age = data.age ?? null;
+    const gender = data.gender ?? null;
+
+    const profile = {
+      name,
+      contact: phone,
+      age,
+      gender,
+      occupation,
+      city: data.city,
+      district,
+      wantsNational: data.wantsNational,
+      consentAccepted: data.consentAccepted,
+    };
 
     let user = null;
     if (data.userId) {
       const existing = await prisma.user.findUnique({ where: { id: data.userId } });
       if (existing) {
-        user = await prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            name: name ?? existing.name,
-            contact: contact ?? existing.contact,
-            city: data.city,
-            district,
-            wantsNational: data.wantsNational,
-            consentAccepted: data.consentAccepted,
-          },
-        });
+        // Ayarlar formu profilin tamamını gönderir → doğrudan güncellenir (boşaltmaya da izin verir)
+        user = await prisma.user.update({ where: { id: existing.id }, data: profile });
       }
     }
 
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          name,
-          contact,
-          city: data.city,
-          district,
-          wantsNational: data.wantsNational,
-          consentAccepted: data.consentAccepted,
-        },
-      });
+      user = await prisma.user.create({ data: profile });
     }
 
     return ok({

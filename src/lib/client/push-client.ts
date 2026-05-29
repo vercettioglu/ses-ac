@@ -93,6 +93,9 @@ export type RecoveredUser = {
   userId: string;
   name: string | null;
   contact: string | null;
+  age: number | null;
+  gender: 'FEMALE' | 'MALE' | 'UNSPECIFIED' | null;
+  occupation: string | null;
   city: string;
   district: string | null;
   wantsNational: boolean;

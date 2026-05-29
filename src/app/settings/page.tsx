@@ -7,12 +7,14 @@ import { AppHeader } from '@/components/app-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { RegionFields, type RegionValue } from '@/components/region-fields';
 import { IosInstallSheet } from '@/components/ios-install-sheet';
 import { apiPost } from '@/lib/client/api';
-import { getLocalUser, setLocalUser, type LocalUser } from '@/lib/client/storage';
+import { getLocalUser, setLocalUser, type LocalUser, type Gender } from '@/lib/client/storage';
 import { enablePush, hasActiveSubscription } from '@/lib/client/push-client';
 import { isIOS, isStandalone, pushSupported } from '@/lib/client/platform';
+import { isValidTrMobile, normalizeTrMobile } from '@/lib/phone';
 
 type NotifState = 'on' | 'off' | 'unsupported' | 'busy';
 
@@ -23,13 +25,26 @@ const SNOOZE_OPTIONS = [
   { label: '1 hafta', hours: 168 },
 ];
 
+const GENDER_OPTIONS: { value: '' | Gender; label: string }[] = [
+  { value: '', label: 'Seçiniz' },
+  { value: 'FEMALE', label: 'Kadın' },
+  { value: 'MALE', label: 'Erkek' },
+  { value: 'UNSPECIFIED', label: 'Belirtmek istemiyorum' },
+];
+
 export default function SettingsPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [userId, setUserId] = useState<string>('');
   const [region, setRegion] = useState<RegionValue>({ city: '', district: '', wantsNational: false });
+
+  // İletişim / profil alanları
   const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
+  const [phone, setPhone] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState<'' | Gender>('');
+  const [occupation, setOccupation] = useState('');
+
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
@@ -52,7 +67,10 @@ export default function SettingsPage() {
       wantsNational: Boolean(local.wantsNational),
     });
     setName(local.name || '');
-    setContact(local.contact || '');
+    setPhone(local.contact || '');
+    setAge(local.age != null ? String(local.age) : '');
+    setGender((local.gender as Gender) || '');
+    setOccupation(local.occupation || '');
     setMutedUntil(local.mutedUntil || null);
 
     (async () => {
@@ -76,12 +94,27 @@ export default function SettingsPage() {
       setSaveMsg('Lütfen ilinizi seçin.');
       return;
     }
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !isValidTrMobile(trimmedPhone)) {
+      setSaveMsg('Geçerli bir cep telefonu girin (örn. 0539 624 92 95).');
+      return;
+    }
+    const ageNum = age.trim() ? Number(age.trim()) : null;
+    if (ageNum !== null && (!Number.isInteger(ageNum) || ageNum < 1 || ageNum > 120)) {
+      setSaveMsg('Geçerli bir yaş girin (1-120).');
+      return;
+    }
+
     setSaving(true);
     try {
+      const normalizedPhone = trimmedPhone ? normalizeTrMobile(trimmedPhone) : null;
       await apiPost('/api/register', {
         userId,
         name: name.trim() || null,
-        contact: contact.trim() || null,
+        contact: normalizedPhone,
+        age: ageNum,
+        gender: gender || null,
+        occupation: occupation.trim() || null,
         city: region.city,
         district: region.district || null,
         wantsNational: region.wantsNational,
@@ -92,9 +125,13 @@ export default function SettingsPage() {
         district: region.district || null,
         wantsNational: region.wantsNational,
         name: name.trim() || undefined,
-        contact: contact.trim() || undefined,
+        contact: normalizedPhone || undefined,
+        age: ageNum,
+        gender: gender || null,
+        occupation: occupation.trim() || null,
       };
       setLocalUser(next);
+      if (normalizedPhone) setPhone(normalizedPhone);
       setSaveMsg('Kaydedildi.');
     } catch (e) {
       setSaveMsg(e instanceof Error ? e.message : 'Kaydedilemedi.');
@@ -134,6 +171,70 @@ export default function SettingsPage() {
       <AppHeader showSettings={false} />
       <main className="container max-w-md space-y-6 py-5">
         <h1 className="text-xl font-bold">Ayarlar</h1>
+
+        {/* İletişim / profil bilgileri (EN ÜSTTE, isteğe bağlı, hesap/şifre yok) */}
+        <section className="rounded-xl border border-border bg-card p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">İletişim bilgileriniz (isteğe bağlı)</h2>
+          </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Hesap oluşturmanıza veya şifre belirlemenize gerek yok — cihazınız sizi hatırlar.
+            Dilerseniz size ulaşabilmemiz için bilgilerinizi bırakabilirsiniz.
+          </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Ad Soyad</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Adınız Soyadınız" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Cep Telefonu</Label>
+              <Input
+                id="phone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="05XX XXX XX XX"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="age">Yaş</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={120}
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="Örn. 34"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gender">Cinsiyet</Label>
+                <Select id="gender" value={gender} onChange={(e) => setGender(e.target.value as '' | Gender)}>
+                  {GENDER_OPTIONS.map((o) => (
+                    <option key={o.value || 'none'} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="occupation">Meslek</Label>
+              <Input
+                id="occupation"
+                value={occupation}
+                onChange={(e) => setOccupation(e.target.value)}
+                placeholder="Örn. Öğretmen"
+              />
+            </div>
+          </div>
+        </section>
 
         {/* Bildirimler */}
         <section className="rounded-xl border border-border bg-card p-5">
@@ -202,33 +303,6 @@ export default function SettingsPage() {
         <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="mb-4 font-semibold">Bölgeniz</h2>
           <RegionFields value={region} onChange={setRegion} />
-        </section>
-
-        {/* İletişim bilgileri (üyelik — isteğe bağlı, hesap/şifre yok) */}
-        <section className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">İletişim bilgileriniz (isteğe bağlı)</h2>
-          </div>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Hesap oluşturmanıza veya şifre belirlemenize gerek yok — cihazınız sizi hatırlar.
-            Dilerseniz size ulaşabilmemiz için ad ve iletişim bilginizi bırakabilirsiniz.
-          </p>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Ad Soyad</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Adınız Soyadınız" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact">E-posta veya Telefon</Label>
-              <Input
-                id="contact"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-                placeholder="ornek@eposta.com veya 05xx…"
-              />
-            </div>
-          </div>
         </section>
 
         {saveMsg && (

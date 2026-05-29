@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { normalizeTrMobile } from './phone';
 
 export const TITLE_MAX = 80;
 export const BODY_MAX = 220;
+
+export const GENDERS = ['FEMALE', 'MALE', 'UNSPECIFIED'] as const;
 
 // ---- Public ----
 
@@ -11,9 +14,15 @@ export const registerSchema = z.object({
   contact: z
     .string()
     .trim()
-    .max(120, 'İletişim bilgisi en fazla 120 karakter')
+    .max(24)
     .optional()
-    .nullable(),
+    .nullable()
+    .refine((v) => !v || normalizeTrMobile(v) !== null, {
+      message: 'Geçerli bir cep telefonu girin (örn. 0539 624 92 95)',
+    }),
+  age: z.number().int('Yaş tam sayı olmalı').min(1, 'Geçersiz yaş').max(120, 'Geçersiz yaş').nullable().optional(),
+  gender: z.enum(GENDERS).nullable().optional(),
+  occupation: z.string().trim().max(80, 'Meslek en fazla 80 karakter').optional().nullable(),
   city: z.string().trim().min(1, 'İl seçilmeli').max(80),
   district: z.string().trim().max(80).optional().nullable(),
   wantsNational: z.boolean().default(false),
