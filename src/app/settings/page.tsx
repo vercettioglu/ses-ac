@@ -32,6 +32,29 @@ const GENDER_OPTIONS: { value: '' | Gender; label: string }[] = [
   { value: 'UNSPECIFIED', label: 'Belirtmek istemiyorum' },
 ];
 
+// Form durumunu karşılaştırılabilir bir dizeye çevirir (değişiklik tespiti için).
+function makeSnap(f: {
+  name?: string;
+  phone?: string;
+  age?: string;
+  gender?: string;
+  occupation?: string;
+  city?: string;
+  district?: string;
+  wantsNational?: boolean;
+}): string {
+  return JSON.stringify({
+    name: (f.name || '').trim(),
+    phone: (f.phone || '').trim(),
+    age: (f.age || '').trim(),
+    gender: f.gender || '',
+    occupation: (f.occupation || '').trim(),
+    city: f.city || '',
+    district: f.district || '',
+    wantsNational: Boolean(f.wantsNational),
+  });
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -47,6 +70,7 @@ export default function SettingsPage() {
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [initialSnap, setInitialSnap] = useState('');
 
   const [notif, setNotif] = useState<NotifState>('off');
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
@@ -72,6 +96,18 @@ export default function SettingsPage() {
     setGender((local.gender as Gender) || '');
     setOccupation(local.occupation || '');
     setMutedUntil(local.mutedUntil || null);
+    setInitialSnap(
+      makeSnap({
+        name: local.name || '',
+        phone: local.contact || '',
+        age: local.age != null ? String(local.age) : '',
+        gender: local.gender || '',
+        occupation: local.occupation || '',
+        city: local.city || '',
+        district: local.district || '',
+        wantsNational: Boolean(local.wantsNational),
+      }),
+    );
 
     (async () => {
       if (isIOS() && !isStandalone()) {
@@ -108,7 +144,8 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       const normalizedPhone = trimmedPhone ? normalizeTrMobile(trimmedPhone) : null;
-      await apiPost('/api/register', {
+      // Sunucu yeni bir kayıt oluşturduysa (eski userId DB'de yoksa) dönen id'yi benimse
+      const res = await apiPost<{ userId: string }>('/api/register', {
         userId,
         name: name.trim() || null,
         contact: normalizedPhone,
@@ -121,6 +158,7 @@ export default function SettingsPage() {
         consentAccepted: true,
       });
       const next: Partial<LocalUser> = {
+        userId: res.userId,
         city: region.city,
         district: region.district || null,
         wantsNational: region.wantsNational,
@@ -131,7 +169,20 @@ export default function SettingsPage() {
         occupation: occupation.trim() || null,
       };
       setLocalUser(next);
+      setUserId(res.userId);
       if (normalizedPhone) setPhone(normalizedPhone);
+      setInitialSnap(
+        makeSnap({
+          name: name.trim(),
+          phone: normalizedPhone || '',
+          age: ageNum != null ? String(ageNum) : '',
+          gender,
+          occupation: occupation.trim(),
+          city: region.city,
+          district: region.district,
+          wantsNational: region.wantsNational,
+        }),
+      );
       setSaveMsg('Kaydedildi.');
     } catch (e) {
       setSaveMsg(e instanceof Error ? e.message : 'Kaydedilemedi.');
@@ -166,10 +217,22 @@ export default function SettingsPage() {
 
   if (!ready) return null;
 
+  const currentSnap = makeSnap({
+    name,
+    phone,
+    age,
+    gender,
+    occupation,
+    city: region.city,
+    district: region.district,
+    wantsNational: region.wantsNational,
+  });
+  const dirty = currentSnap !== initialSnap;
+
   return (
     <>
       <AppHeader showSettings={false} />
-      <main className="container max-w-md space-y-6 py-5">
+      <main className="container max-w-md space-y-6 py-5 pb-28">
         <h1 className="text-xl font-bold">Ayarlar</h1>
 
         {/* İletişim / profil bilgileri (EN ÜSTTE, isteğe bağlı, hesap/şifre yok) */}
@@ -305,23 +368,28 @@ export default function SettingsPage() {
           <RegionFields value={region} onChange={setRegion} />
         </section>
 
-        {saveMsg && (
-          <p
-            className={
-              saveMsg === 'Kaydedildi.'
-                ? 'text-sm font-medium text-emerald-600'
-                : 'text-sm font-medium text-destructive'
-            }
-          >
-            {saveMsg}
-          </p>
-        )}
-
-        <Button className="w-full" size="lg" onClick={handleSave} disabled={saving}>
-          <Save className="h-5 w-5" />
-          {saving ? 'Kaydediliyor…' : 'Kaydet'}
-        </Button>
       </main>
+
+      {/* Sticky kaydet çubuğu — mobilde altta sabit, değişiklik yoksa pasif */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur">
+        <div className="safe-bottom container max-w-md py-3">
+          {saveMsg && !(saveMsg === 'Kaydedildi.' && dirty) && (
+            <p
+              className={
+                saveMsg === 'Kaydedildi.'
+                  ? 'mb-2 text-center text-sm font-medium text-emerald-600'
+                  : 'mb-2 text-center text-sm font-medium text-destructive'
+              }
+            >
+              {saveMsg}
+            </p>
+          )}
+          <Button className="w-full" size="lg" onClick={handleSave} disabled={saving || !dirty}>
+            <Save className="h-5 w-5" />
+            {saving ? 'Kaydediliyor…' : 'Kaydet'}
+          </Button>
+        </div>
+      </div>
 
       <IosInstallSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </>
