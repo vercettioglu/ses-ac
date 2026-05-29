@@ -1,5 +1,6 @@
 import { PrismaClient, type Role, type SenderType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { nextId } from '../src/lib/snowflake';
 
 const prisma = new PrismaClient();
 
@@ -109,6 +110,7 @@ async function main() {
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     await prisma.announcement.create({
       data: {
+        publicId: nextId(),
         title: 'Ülke geneli duyuru testi',
         body: 'Tüm Türkiye duyurularını açan kullanıcılara gönderilen örnek bir duyurudur.',
         isNational: true,
@@ -118,6 +120,7 @@ async function main() {
     });
     await prisma.announcement.create({
       data: {
+        publicId: nextId(),
         title: 'Antalya geneli bilgilendirme',
         body: 'Antalya ilindeki tüm kullanıcılara yönelik örnek bir il duyurusudur.',
         city: 'Antalya',
@@ -127,6 +130,7 @@ async function main() {
     });
     await prisma.announcement.create({
       data: {
+        publicId: nextId(),
         title: 'Konyaaltı sahil etkinliği',
         body: 'Konyaaltı ilçesindeki kullanıcılara özel örnek bir ilçe duyurusudur.',
         city: 'Antalya',
@@ -138,6 +142,7 @@ async function main() {
     // 24 saatten eski → feed'de silik görünmesi beklenir
     await prisma.announcement.create({
       data: {
+        publicId: nextId(),
         title: 'Eski duyuru (2 gün önce)',
         body: 'Bu duyuru 24 saatten eski olduğu için akışta daha silik görünür ama silinmez.',
         city: 'Antalya',
@@ -151,6 +156,16 @@ async function main() {
   } else {
     console.log(`  • ${annCount} duyuru zaten var, atlandı`);
   }
+
+  // Eksik publicId'leri tamamla (eski/mevcut duyurular sayısal URL alsın)
+  const missing = await prisma.announcement.findMany({
+    where: { publicId: null },
+    select: { id: true },
+  });
+  for (const a of missing) {
+    await prisma.announcement.update({ where: { id: a.id }, data: { publicId: nextId() } });
+  }
+  if (missing.length) console.log(`  ✓ ${missing.length} duyuruya sayısal kimlik atandı`);
 
   console.log('\nSeed tamamlandı. Giriş bilgileri:');
   console.log('  SUPER_ADMIN : superadmin@ses.ac');

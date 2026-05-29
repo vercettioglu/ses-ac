@@ -53,10 +53,11 @@ export async function dispatchAnnouncement(announcementId: string): Promise<Disp
     select: { id: true, endpoint: true, p256dh: true, auth: true },
   });
 
+  const publicId = announcement.publicId ?? announcement.id;
   const payload = JSON.stringify({
     title: announcement.title,
     body: announcement.body,
-    data: { announcementId: announcement.id, url: `/a/${announcement.id}` },
+    data: { announcementId: publicId, url: `/a/${publicId}` },
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-72.png',
   });

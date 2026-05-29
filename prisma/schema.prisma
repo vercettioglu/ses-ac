@@ -142,6 +142,7 @@ model SenderPermission {
 
 model Announcement {
   id          String   @id @default(cuid())
+  publicId    String?  @unique // URL'de görünen sayısal (snowflake) kimlik
   title       String
   body        String
   city        String?

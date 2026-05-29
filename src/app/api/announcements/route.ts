@@ -8,9 +8,31 @@ import { dispatchAnnouncement } from '@/lib/push';
 import { getSenderRateLimitPerMin } from '@/lib/settings';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
+import { nextId } from '@/lib/snowflake';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+// Duyuruyu benzersiz sayısal publicId ile oluşturur (nadir çakışmada tekrar dener).
+async function createAnnouncement(data: Prisma.AnnouncementUncheckedCreateInput) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await prisma.announcement.create({ data: { ...data, publicId: nextId() } });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002' && attempt < 4) {
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('Duyuru kimliği üretilemedi');
+}
+
+// Client'a iç CUID yerine sayısal publicId'yi `id` olarak verir (URL'de sayısal görünür).
+function withPublicId<T extends { id: string; publicId?: string | null }>(a: T) {
+  const { publicId, ...rest } = a;
+  return { ...rest, id: publicId ?? a.id };
+}
 
 // GET: scope=all (admin) | scope=mine (gönderici geçmişi) | public feed (city/district)
 export async function GET(req: NextRequest) {
@@ -28,7 +50,7 @@ export async function GET(req: NextRequest) {
           _count: { select: { deliveryLogs: true } },
         },
       });
-      return ok({ items });
+      return ok({ items: items.map(withPublicId) });
     }
 
     if (scope === 'mine') {
@@ -51,7 +73,7 @@ export async function GET(req: NextRequest) {
           grouped.forEach((g) => {
             stats[g.status] = g._count;
           });
-          return { ...a, stats };
+          return { ...withPublicId(a), stats };
         }),
       );
       return ok({ items: withStats });
@@ -71,6 +93,7 @@ export async function GET(req: NextRequest) {
       take: 100,
       select: {
         id: true,
+        publicId: true,
         title: true,
         body: true,
         city: true,
@@ -80,7 +103,7 @@ export async function GET(req: NextRequest) {
         createdAt: true,
       },
     });
-    return ok({ items });
+    return ok({ items: items.map(withPublicId) });
   } catch (err) {
     return handleError(err);
   }
@@ -130,16 +153,14 @@ export async function POST(req: NextRequest) {
 
     const created = [];
     for (const t of targets) {
-      const announcement = await prisma.announcement.create({
-        data: {
-          title: data.title,
-          body: data.body,
-          city: t.city,
-          district: t.district,
-          isNational: t.isNational,
-          createdById: actor.id,
-          senderName: actor.name,
-        },
+      const announcement = await createAnnouncement({
+        title: data.title,
+        body: data.body,
+        city: t.city,
+        district: t.district,
+        isNational: t.isNational,
+        createdById: actor.id,
+        senderName: actor.name,
       });
       const summary = await dispatchAnnouncement(announcement.id);
       created.push({
