@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
       or.push({ city, district: null });
       if (district) or.push({ city, district });
     }
-    const items = await prisma.announcement.findMany({
+    const rows = await prisma.announcement.findMany({
       where: { OR: or },
       orderBy: { createdAt: 'desc' },
       take: 100,
@@ -99,11 +99,23 @@ export async function GET(req: NextRequest) {
         city: true,
         district: true,
         isNational: true,
-        senderName: true,
         createdAt: true,
+        // Güncel gönderici adı (createdBy üzerinden canlı) — rename sonrası güncellenir
+        createdBy: { select: { name: true } },
+        senderName: true,
       },
     });
-    return ok({ items: items.map(withPublicId) });
+    const items = rows.map((a) => ({
+      id: a.publicId ?? a.id,
+      title: a.title,
+      body: a.body,
+      city: a.city,
+      district: a.district,
+      isNational: a.isNational,
+      createdAt: a.createdAt,
+      senderName: a.createdBy?.name ?? a.senderName ?? null,
+    }));
+    return ok({ items });
   } catch (err) {
     return handleError(err);
   }

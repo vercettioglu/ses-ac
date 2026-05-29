@@ -23,12 +23,20 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         isNational: true,
         senderName: true,
         createdAt: true,
+        // Güncel gönderici adı (rename sonrası güncellenir)
+        createdBy: { select: { name: true } },
       },
     });
     if (!announcement) return fail('Duyuru bulunamadı', 404);
 
-    const { publicId, ...rest } = announcement;
-    return ok({ announcement: { ...rest, id: publicId ?? announcement.id } });
+    const { publicId, createdBy, senderName, ...rest } = announcement;
+    return ok({
+      announcement: {
+        ...rest,
+        id: publicId ?? announcement.id,
+        senderName: createdBy?.name ?? senderName ?? null,
+      },
+    });
   } catch (err) {
     return handleError(err);
   }

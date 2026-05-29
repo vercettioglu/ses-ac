@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { DashboardShell, type NavItem } from '@/components/dashboard-shell';
 
 const NAV: NavItem[] = [
@@ -14,14 +15,21 @@ const NAV: NavItem[] = [
 export default async function AdminAppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect('/admin/login');
-  if (session.role === 'SENDER') redirect('/panel');
+
+  // İsim/rol güncel olsun diye JWT yerine DB'den oku
+  const actor = await prisma.adminUser.findUnique({
+    where: { id: session.sub },
+    select: { name: true, role: true, isActive: true },
+  });
+  if (!actor || !actor.isActive) redirect('/admin/login');
+  if (actor.role === 'SENDER') redirect('/panel');
 
   return (
     <DashboardShell
       brand="Ses Aç · Yönetim"
       items={NAV}
-      name={session.name}
-      role={session.role}
+      name={actor.name}
+      role={actor.role}
       logoutRedirect="/admin/login"
     >
       {children}

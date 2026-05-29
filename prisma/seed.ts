@@ -18,33 +18,28 @@ const REGIONS: { city: string; district: string | null }[] = [
   { city: 'Ankara', district: 'Çankaya' },
 ];
 
-async function upsertAdmin(opts: {
+// Hesabı yalnızca yoksa oluşturur. Mevcut hesaba DOKUNMAZ — böylece panelden yapılan
+// manuel düzenlemeler (isim, rol, yetki) tekrar seed çalıştırılınca ezilmez.
+async function ensureAdmin(opts: {
   name: string;
   email: string;
   role: Role;
   senderType: SenderType;
   permissions: { city: string; district: string | null }[];
 }) {
+  const existing = await prisma.adminUser.findUnique({ where: { email: opts.email } });
+  if (existing) return existing;
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
-  const user = await prisma.adminUser.upsert({
-    where: { email: opts.email },
-    update: { name: opts.name, role: opts.role, senderType: opts.senderType, isActive: true },
-    create: {
+  return prisma.adminUser.create({
+    data: {
       name: opts.name,
       email: opts.email,
       role: opts.role,
       senderType: opts.senderType,
       passwordHash,
+      permissions: opts.permissions.length ? { create: opts.permissions } : undefined,
     },
   });
-  // Yetkileri tazele
-  await prisma.senderPermission.deleteMany({ where: { adminUserId: user.id } });
-  if (opts.permissions.length > 0) {
-    await prisma.senderPermission.createMany({
-      data: opts.permissions.map((p) => ({ adminUserId: user.id, city: p.city, district: p.district })),
-    });
-  }
-  return user;
 }
 
 async function main() {
@@ -58,7 +53,7 @@ async function main() {
   console.log(`  ✓ ${REGIONS.length} bölge`);
 
   // ---- Yönetici / gönderici hesapları ----
-  const superAdmin = await upsertAdmin({
+  const superAdmin = await ensureAdmin({
     name: 'Sistem Yöneticisi',
     email: 'superadmin@ses.ac',
     role: 'SUPER_ADMIN',
@@ -66,25 +61,24 @@ async function main() {
     permissions: [],
   });
   // Bölge yöneticisi aynı zamanda gönderici (kurumsal) olabilir
-  const regionAdmin = await upsertAdmin({
+  const regionAdmin = await ensureAdmin({
     name: 'Antalya İl Duyuru Ekibi',
     email: 'antalya.admin@ses.ac',
     role: 'REGION_ADMIN',
     senderType: 'ORGANIZATION',
     permissions: [{ city: 'Antalya', district: null }],
   });
-  const sender = await upsertAdmin({
+  const sender = await ensureAdmin({
     name: 'Konyaaltı Duyuru Ekibi',
     email: 'konyaalti.sender@ses.ac',
     role: 'SENDER',
     senderType: 'ORGANIZATION',
     permissions: [{ city: 'Antalya', district: 'Konyaaltı' }],
   });
-  // Hiyerarşi: Konyaaltı göndericisi, Antalya bölge yöneticisine bağlı
-  await prisma.adminUser.update({
-    where: { id: sender.id },
-    data: { parentId: regionAdmin.id },
-  });
+  // Hiyerarşi: Konyaaltı göndericisi, Antalya bölge yöneticisine bağlı (yalnızca boşsa)
+  if (!sender.parentId) {
+    await prisma.adminUser.update({ where: { id: sender.id }, data: { parentId: regionAdmin.id } });
+  }
   console.log('  ✓ 3 hesap (SUPER_ADMIN, REGION_ADMIN, SENDER) + hiyerarşi');
 
   // ---- Örnek kullanıcılar (yalnızca boşsa) ----
