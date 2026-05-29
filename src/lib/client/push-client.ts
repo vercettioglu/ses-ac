@@ -89,6 +89,43 @@ export async function disablePush(): Promise<void> {
   }
 }
 
+export type RecoveredUser = {
+  userId: string;
+  name: string | null;
+  contact: string | null;
+  city: string;
+  district: string | null;
+  wantsNational: boolean;
+  mutedUntil: string | null;
+};
+
+// localStorage silinmişse, tarayıcının mevcut push aboneliğinden (endpoint) eski
+// kullanıcı kaydını geri bulur. Başarısız/yavaşsa null döner (akışı bloklamaz).
+export async function recoverFromDevice(timeoutMs = 2500): Promise<RecoveredUser | null> {
+  if (!pushSupported()) return null;
+
+  const work = (async (): Promise<RecoveredUser | null> => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) return null;
+      const res = await fetch('/api/push/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json?.data?.found ? (json.data.user as RecoveredUser) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
+  return Promise.race([work, timeout]);
+}
+
 export async function hasActiveSubscription(): Promise<boolean> {
   if (!pushSupported()) return false;
   try {

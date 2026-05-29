@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RegionFields, type RegionValue } from '@/components/region-fields';
 import { apiPost } from '@/lib/client/api';
 import { getLocalUser, setLocalUser } from '@/lib/client/storage';
+import { recoverFromDevice } from '@/lib/client/push-client';
 
 export default function HomePage() {
   const router = useRouter();
@@ -22,7 +23,26 @@ export default function HomePage() {
       router.replace(local.notificationsEnabled ? '/feed' : '/setup');
       return;
     }
-    setReady(true);
+    // localStorage boş → cihazın push endpoint'inden eski kaydı (ad/telefon/bölge) kurtarmayı dene
+    (async () => {
+      const recovered = await recoverFromDevice();
+      if (recovered) {
+        setLocalUser({
+          userId: recovered.userId,
+          name: recovered.name ?? undefined,
+          contact: recovered.contact ?? undefined,
+          city: recovered.city,
+          district: recovered.district,
+          wantsNational: recovered.wantsNational,
+          consentAccepted: true,
+          notificationsEnabled: true,
+          mutedUntil: recovered.mutedUntil,
+        });
+        router.replace('/feed');
+        return;
+      }
+      setReady(true);
+    })();
   }, [router]);
 
   async function handleSubmit() {
