@@ -1,0 +1,49 @@
+export type PlatformKind = 'ios' | 'android' | 'desktop' | 'unknown';
+
+export function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const iOSDevice = /iPad|iPhone|iPod/.test(ua);
+  // iPadOS 13+ kendini Mac gibi tanıtır:
+  const iPadOS =
+    navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1;
+  return iOSDevice || iPadOS;
+}
+
+export function isAndroid(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android/i.test(navigator.userAgent || '');
+}
+
+export function detectPlatform(): PlatformKind {
+  if (typeof navigator === 'undefined') return 'unknown';
+  if (isIOS()) return 'ios';
+  if (isAndroid()) return 'android';
+  if (/Windows|Macintosh|Linux|CrOS/i.test(navigator.userAgent || '')) return 'desktop';
+  return 'unknown';
+}
+
+// Uygulama ana ekrandan (PWA / standalone) mı açıldı?
+export function isStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  const iosStandalone = (window.navigator as any).standalone === true;
+  const mq =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(display-mode: standalone)').matches;
+  return Boolean(iosStandalone || mq);
+}
+
+// Tarayıcı web push'u destekliyor mu?
+export function pushSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    'serviceWorker' in navigator &&
+    'PushManager' in window &&
+    'Notification' in window
+  );
+}
+
+export function notificationPermission(): NotificationPermission | 'unsupported' {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
+  return Notification.permission;
+}

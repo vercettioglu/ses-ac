@@ -1,0 +1,190 @@
+// Ses Aç — Prisma şeması
+// PostgreSQL üzerinde çalışır. Migration: `npm run db:migrate -- --name init`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---- Enum'lar ----
+
+enum Platform {
+  ios
+  android
+  desktop
+  unknown
+}
+
+enum Role {
+  SUPER_ADMIN
+  REGION_ADMIN
+  SENDER
+}
+
+enum SenderType {
+  INDIVIDUAL // bireysel kişi
+  ORGANIZATION // tüzel kişi / kurum
+}
+
+enum DeliveryStatus {
+  pending
+  sent
+  failed
+}
+
+// ---- Son kullanıcı (takipçi) ----
+
+model User {
+  id              String   @id @default(cuid())
+  name            String? // Üye olmayan kullanıcılarda boş olabilir
+  contact         String? // E-posta veya telefon (opsiyonel, doğrulamasız)
+  city            String
+  district        String?
+  wantsNational   Boolean   @default(false)
+  consentAccepted Boolean   @default(false)
+  mutedUntil      DateTime? // bu tarihe kadar bildirimler sessize alınır (kapatma değil)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  subscriptions PushSubscription[]
+
+  @@index([city, district])
+  @@index([wantsNational])
+}
+
+// ---- Tarayıcı/cihaz push aboneliği ----
+
+model PushSubscription {
+  id            String    @id @default(cuid())
+  userId        String
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String?
+  platform      Platform  @default(unknown)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastSuccessAt DateTime?
+  lastFailureAt DateTime?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveryLogs DeliveryLog[]
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+// ---- İl/İlçe referans verisi (formlar ve istatistikler için) ----
+
+model Region {
+  id       String  @id @default(cuid())
+  city     String
+  district String?
+
+  @@unique([city, district])
+  @@index([city])
+}
+
+// ---- Yönetici / Gönderici hesapları ----
+
+model AdminUser {
+  id           String     @id @default(cuid())
+  name         String // görünen ad: bireyselde ad soyad, kurumsalda kurum adı
+  senderType   SenderType @default(INDIVIDUAL)
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(SENDER)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  permissions   SenderPermission[]
+  announcements Announcement[]
+  auditLogs     AuditLog[]
+}
+
+// ---- Göndericinin yetkili olduğu bölgeler ----
+
+model SenderPermission {
+  id          String   @id @default(cuid())
+  adminUserId String
+  city        String
+  district    String? // null ise tüm il yetkisi
+  createdAt   DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([city, district])
+}
+
+// ---- Duyurular ----
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  city        String?
+  district    String?
+  isNational  Boolean  @default(false)
+  createdById String
+  senderName  String? // gönderim anındaki görünen gönderici adı (kullanıcı akışında gösterilir)
+  createdAt   DateTime @default(now())
+
+  createdBy    AdminUser     @relation(fields: [createdById], references: [id])
+  deliveryLogs DeliveryLog[]
+
+  @@index([createdAt])
+  @@index([isNational])
+  @@index([city, district])
+}
+
+// ---- Gönderim kaydı ----
+
+model DeliveryLog {
+  id                 String         @id @default(cuid())
+  announcementId     String
+  pushSubscriptionId String? // Abonelik temizlenirse log korunsun diye nullable
+  status             DeliveryStatus @default(pending)
+  errorCode          String?
+  errorMessage       String?
+  createdAt          DateTime       @default(now())
+
+  announcement     Announcement      @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  pushSubscription PushSubscription? @relation(fields: [pushSubscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([announcementId])
+  @@index([status])
+}
+
+// ---- Denetim kaydı (audit log) ----
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  action     String // ör: "announcement.create", "sender.create", "sender.deactivate"
+  targetType String?
+  targetId   String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  actor AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+// ---- Uygulama ayarları (rate limit vb. admin tarafından düzenlenebilir) ----
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

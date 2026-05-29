@@ -1,0 +1,255 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Bell, BellRing, Save, Smartphone, UserPlus, Moon } from 'lucide-react';
+import { AppHeader } from '@/components/app-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RegionFields, type RegionValue } from '@/components/region-fields';
+import { IosInstallSheet } from '@/components/ios-install-sheet';
+import { apiPost } from '@/lib/client/api';
+import { getLocalUser, setLocalUser, type LocalUser } from '@/lib/client/storage';
+import { enablePush, hasActiveSubscription } from '@/lib/client/push-client';
+import { isIOS, isStandalone, pushSupported } from '@/lib/client/platform';
+
+type NotifState = 'on' | 'off' | 'unsupported' | 'busy';
+
+const SNOOZE_OPTIONS = [
+  { label: '1 saat', hours: 1 },
+  { label: '8 saat', hours: 8 },
+  { label: '1 gün', hours: 24 },
+  { label: '1 hafta', hours: 168 },
+];
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+  const [userId, setUserId] = useState<string>('');
+  const [region, setRegion] = useState<RegionValue>({ city: '', district: '', wantsNational: false });
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  const [notif, setNotif] = useState<NotifState>('off');
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
+  const [mutedUntil, setMutedUntil] = useState<string | null>(null);
+  const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const local = getLocalUser();
+    if (!local?.userId) {
+      router.replace('/');
+      return;
+    }
+    setUserId(local.userId);
+    setRegion({
+      city: local.city || '',
+      district: local.district || '',
+      wantsNational: Boolean(local.wantsNational),
+    });
+    setName(local.name || '');
+    setContact(local.contact || '');
+    setMutedUntil(local.mutedUntil || null);
+
+    (async () => {
+      if (isIOS() && !isStandalone()) {
+        setIosNeedsInstall(true);
+        setNotif('off');
+      } else if (!pushSupported()) {
+        setNotif('unsupported');
+      } else {
+        setNotif((await hasActiveSubscription()) ? 'on' : 'off');
+      }
+      setReady(true);
+    })();
+  }, [router]);
+
+  const isMuted = Boolean(mutedUntil && new Date(mutedUntil).getTime() > Date.now());
+
+  async function handleSave() {
+    setSaveMsg(null);
+    if (!region.city) {
+      setSaveMsg('Lütfen ilinizi seçin.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiPost('/api/register', {
+        userId,
+        name: name.trim() || null,
+        contact: contact.trim() || null,
+        city: region.city,
+        district: region.district || null,
+        wantsNational: region.wantsNational,
+        consentAccepted: true,
+      });
+      const next: Partial<LocalUser> = {
+        city: region.city,
+        district: region.district || null,
+        wantsNational: region.wantsNational,
+        name: name.trim() || undefined,
+        contact: contact.trim() || undefined,
+      };
+      setLocalUser(next);
+      setSaveMsg('Kaydedildi.');
+    } catch (e) {
+      setSaveMsg(e instanceof Error ? e.message : 'Kaydedilemedi.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function enable() {
+    setNotifMsg(null);
+    setNotif('busy');
+    const res = await enablePush(userId);
+    if (res.ok) {
+      setLocalUser({ notificationsEnabled: true });
+      setNotif('on');
+    } else {
+      setNotif('off');
+      setNotifMsg(res.message);
+    }
+  }
+
+  async function snooze(hours: number) {
+    setNotifMsg(null);
+    try {
+      const res = await apiPost<{ mutedUntil: string | null }>('/api/push/snooze', { userId, hours });
+      setMutedUntil(res.mutedUntil);
+      setLocalUser({ mutedUntil: res.mutedUntil });
+    } catch (e) {
+      setNotifMsg(e instanceof Error ? e.message : 'İşlem başarısız.');
+    }
+  }
+
+  if (!ready) return null;
+
+  return (
+    <>
+      <AppHeader showSettings={false} />
+      <main className="container max-w-md space-y-6 py-5">
+        <h1 className="text-xl font-bold">Ayarlar</h1>
+
+        {/* Bildirimler */}
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h2 className="mb-3 font-semibold">Bildirimler</h2>
+
+          {iosNeedsInstall ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Smartphone className="h-4 w-4" />
+                Bildirimler için Ses Aç’ı ana ekranınıza ekleyin.
+              </div>
+              <Button variant="outline" className="w-full" onClick={() => setSheetOpen(true)}>
+                Nasıl eklerim?
+              </Button>
+            </div>
+          ) : notif === 'unsupported' ? (
+            <p className="text-sm text-muted-foreground">
+              Bu cihaz/tarayıcı anlık bildirimleri desteklemiyor.
+            </p>
+          ) : notif === 'off' ? (
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Bölgenizdeki duyuruları kaçırmamak için bildirimleri açın.
+              </p>
+              <Button className="w-full" onClick={enable}>
+                Bildirimleri Aç
+              </Button>
+              {notifMsg && <p className="mt-3 text-sm text-destructive">{notifMsg}</p>}
+            </>
+          ) : isMuted ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm">
+                <Moon className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  Bildirimler{' '}
+                  <strong>{new Date(mutedUntil!).toLocaleString('tr-TR')}</strong> tarihine kadar
+                  sessizde.
+                </span>
+              </div>
+              <Button className="w-full" onClick={() => snooze(0)}>
+                <BellRing className="h-4 w-4" />
+                Sessize almayı kaldır
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                <Bell className="h-4 w-4" /> Bildirimler açık
+              </div>
+              <p className="mb-2 text-sm text-muted-foreground">
+                Bir süreliğine sessize alabilirsiniz; süre sonunda kendiliğinden geri açılır.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SNOOZE_OPTIONS.map((o) => (
+                  <Button key={o.hours} variant="outline" size="sm" onClick={() => snooze(o.hours)}>
+                    {o.label} sessize al
+                  </Button>
+                ))}
+              </div>
+              {notifMsg && <p className="mt-3 text-sm text-destructive">{notifMsg}</p>}
+            </>
+          )}
+        </section>
+
+        {/* Bölge */}
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h2 className="mb-4 font-semibold">Bölgeniz</h2>
+          <RegionFields value={region} onChange={setRegion} />
+        </section>
+
+        {/* İletişim bilgileri (üyelik — isteğe bağlı, hesap/şifre yok) */}
+        <section className="rounded-xl border border-border bg-card p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">İletişim bilgileriniz (isteğe bağlı)</h2>
+          </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Hesap oluşturmanıza veya şifre belirlemenize gerek yok — cihazınız sizi hatırlar.
+            Dilerseniz size ulaşabilmemiz için ad ve iletişim bilginizi bırakabilirsiniz.
+          </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Ad Soyad</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Adınız Soyadınız" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact">E-posta veya Telefon</Label>
+              <Input
+                id="contact"
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+                placeholder="ornek@eposta.com veya 05xx…"
+              />
+            </div>
+          </div>
+        </section>
+
+        {saveMsg && (
+          <p
+            className={
+              saveMsg === 'Kaydedildi.'
+                ? 'text-sm font-medium text-emerald-600'
+                : 'text-sm font-medium text-destructive'
+            }
+          >
+            {saveMsg}
+          </p>
+        )}
+
+        <Button className="w-full" size="lg" onClick={handleSave} disabled={saving}>
+          <Save className="h-5 w-5" />
+          {saving ? 'Kaydediliyor…' : 'Kaydet'}
+        </Button>
+      </main>
+
+      <IosInstallSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+    </>
+  );
+}

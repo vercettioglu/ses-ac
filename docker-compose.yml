@@ -1,0 +1,27 @@
+# Lokal geliştirme için PostgreSQL.
+# Çalıştırma:  docker compose up -d
+# Bu durumda .env içindeki DATABASE_URL:
+#   postgresql://sesac:sesac@localhost:5432/sesac?schema=public
+#
+# NOT: Makinenizde Docker yoksa README'deki "Docker olmadan Postgres" bölümüne bakın.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sesac-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sesac
+      POSTGRES_PASSWORD: sesac
+      POSTGRES_DB: sesac
+    ports:
+      - '5432:5432'
+    volumes:
+      - sesac_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sesac -d sesac']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sesac_pgdata:

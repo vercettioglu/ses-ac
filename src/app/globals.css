@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 98%; /* kırık beyaz */
+    --foreground: 222 47% 11%; /* koyu lacivert / siyaha yakın */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --primary: 4 74% 49%; /* sıcak kırmızı (tek vurgu) */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 47% 11%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 40 20% 94%;
+    --muted-foreground: 222 12% 42%;
+
+    --accent: 40 20% 94%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 15% 88%;
+    --input: 40 16% 84%;
+    --ring: 4 74% 49%;
+
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    /* iOS güvenli alan (notch) için alt boşluk */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Daha okunabilir taban font (yaşlı kullanıcılar) */
+  body {
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
