@@ -7,6 +7,7 @@ import { Bell, Inbox, MapPin, RefreshCw, UserPlus, X } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import { AnnouncementCard, type AnnouncementItem } from '@/components/announcement-card';
 import { apiGet } from '@/lib/client/api';
+import { clearBadge } from '@/lib/client/push-client';
 import { getLocalUser, setLocalUser, type LocalUser } from '@/lib/client/storage';
 
 export default function FeedPage() {
@@ -44,6 +45,8 @@ export default function FeedPage() {
     setLocal(user);
     setShowMemberNudge(!user.name && !user.contact && !user.membershipPromptDismissed);
     void load(user);
+    // Akışı görüntüledi → uygulama ikonundaki okunmamış rozetini temizle
+    void clearBadge();
   }, [router, load]);
 
   function dismissNudge() {

@@ -12,6 +12,45 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// ---- Okunmamış bildirim sayacı (uygulama ikonu rozeti / Badging API) ----
+// Not: iOS PWA ikonunu değiştirmek mümkün değil; standart yol ikon üstünde rozettir.
+function badgeStore(mode, value) {
+  return new Promise((resolve) => {
+    let req;
+    try {
+      req = indexedDB.open('susma-badge', 1);
+    } catch (e) {
+      resolve(0);
+      return;
+    }
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onerror = () => resolve(0);
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction('kv', 'readwrite');
+      const store = tx.objectStore('kv');
+      if (mode === 'get') {
+        const g = store.get('count');
+        g.onsuccess = () => resolve(g.result || 0);
+        g.onerror = () => resolve(0);
+      } else {
+        store.put(value, 'count');
+        tx.oncomplete = () => resolve(value);
+        tx.onerror = () => resolve(value);
+      }
+    };
+  });
+}
+
+async function applyBadge(count) {
+  try {
+    if (count > 0 && self.navigator.setAppBadge) await self.navigator.setAppBadge(count);
+    else if (count <= 0 && self.navigator.clearAppBadge) await self.navigator.clearAppBadge();
+  } catch (e) {
+    /* desteklenmiyorsa yoksay */
+  }
+}
+
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
@@ -34,7 +73,27 @@ self.addEventListener('push', (event) => {
     renotify: false,
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(title, options);
+      // Okunmamış sayacını artır ve uygulama ikonuna rozet koy
+      const count = (await badgeStore('get')) + 1;
+      await badgeStore('set', count);
+      await applyBadge(count);
+    })(),
+  );
+});
+
+// Akış görüntülenince (istemci) okundu say → rozet temizle
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'clear-badge') {
+    event.waitUntil(
+      (async () => {
+        await badgeStore('set', 0);
+        await applyBadge(0);
+      })(),
+    );
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {

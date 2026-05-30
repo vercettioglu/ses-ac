@@ -149,6 +149,24 @@ export async function showLocalNotification(title: string, body: string): Promis
   }
 }
 
+// Akış görüntülenince uygulama ikonundaki okunmamış rozetini temizler.
+export async function clearBadge(): Promise<void> {
+  try {
+    if (typeof navigator !== 'undefined' && 'clearAppBadge' in navigator) {
+      await (navigator as unknown as { clearAppBadge: () => Promise<void> }).clearAppBadge();
+    }
+  } catch {
+    /* yoksay */
+  }
+  try {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const registration = await navigator.serviceWorker.ready;
+    registration.active?.postMessage({ type: 'clear-badge' });
+  } catch {
+    /* yoksay */
+  }
+}
+
 export async function hasActiveSubscription(): Promise<boolean> {
   if (!pushSupported()) return false;
   try {
