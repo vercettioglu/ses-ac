@@ -44,6 +44,8 @@ async function ensureAdmin(opts: {
 
 async function main() {
   console.log('Seed başlıyor…');
+  // Üretimde demo kullanıcı/duyuru oluşturma (yalnızca yönetici hesapları + bölgeler).
+  const isProd = process.env.NODE_ENV === 'production';
 
   // ---- Bölgeler ----
   for (const r of REGIONS) {
@@ -81,9 +83,9 @@ async function main() {
   }
   console.log('  ✓ 3 hesap (SUPER_ADMIN, REGION_ADMIN, SENDER) + hiyerarşi');
 
-  // ---- Örnek kullanıcılar (yalnızca boşsa) ----
+  // ---- Örnek kullanıcılar (yalnızca dev'de ve boşsa) ----
   const userCount = await prisma.user.count();
-  if (userCount === 0) {
+  if (!isProd && userCount === 0) {
     await prisma.user.createMany({
       data: [
         { name: 'Ayşe K.', city: 'Antalya', district: 'Konyaaltı', wantsNational: true, consentAccepted: true },
@@ -98,9 +100,9 @@ async function main() {
     console.log(`  • ${userCount} kullanıcı zaten var, atlandı`);
   }
 
-  // ---- Örnek duyurular (yalnızca boşsa) ----
+  // ---- Örnek duyurular (yalnızca dev'de ve boşsa) ----
   const annCount = await prisma.announcement.count();
-  if (annCount === 0) {
+  if (!isProd && annCount === 0) {
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     await prisma.announcement.create({
       data: {

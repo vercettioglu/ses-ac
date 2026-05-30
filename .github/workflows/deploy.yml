@@ -1,0 +1,27 @@
+name: Deploy (VPS)
+
+# main'e her push'ta üretime otomatik deploy.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: susma-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: VPS'e SSH ile deploy tetikle
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 173.212.238.104
+          username: root
+          port: 22
+          key: ${{ secrets.VPS_SSH_KEY }}
+          # VPS'te anahtar forced-command ile kısıtlı: ne gönderilirse gönderilsin
+          # yalnızca /opt/susma/deploy.sh çalışır.
+          script: /opt/susma/deploy.sh
+          command_timeout: 15m
