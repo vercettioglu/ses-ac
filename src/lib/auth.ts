@@ -8,7 +8,9 @@ import { HttpError } from './http';
 import { prisma } from './prisma';
 
 const COOKIE_NAME = 'sa_session';
+const MEMBER_COOKIE_NAME = 'sa_member';
 const TTL_SECONDS = 60 * 60 * 24 * 7; // 7 gün
+const MEMBER_TTL_SECONDS = 60 * 60 * 24 * 180; // 180 gün (son kullanıcı oturumu uzun ömürlü)
 
 export type SessionPayload = {
   sub: string;
@@ -94,6 +96,57 @@ export async function requireSession(roles?: Role[]): Promise<SessionPayload> {
     throw new HttpError('Bu işlem için yetkiniz yok', 403);
   }
   return session;
+}
+
+// ---- Son kullanıcı (üye) oturumu ----
+// Admin/gönderici oturumundan tamamen ayrı bir cookie (sa_member) ve yük taşır;
+// karışmaz. Üyenin feed/abonelik işlemleri için kimlik doğrulayan hafif oturum.
+
+export type MemberSession = { sub: string; email: string };
+
+export async function signMemberSession(payload: MemberSession): Promise<string> {
+  return new SignJWT({ email: payload.email, kind: 'member' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(payload.sub)
+    .setIssuedAt()
+    .setExpirationTime(`${MEMBER_TTL_SECONDS}s`)
+    .sign(secretKey());
+}
+
+export async function verifyMemberSession(token: string): Promise<MemberSession | null> {
+  try {
+    const { payload } = await jwtVerify(token, secretKey());
+    if (!payload.sub || payload.kind !== 'member') return null;
+    return { sub: payload.sub, email: String(payload.email ?? '') };
+  } catch {
+    return null;
+  }
+}
+
+export function setMemberSessionCookie(token: string) {
+  cookies().set(MEMBER_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: env.isProduction,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: MEMBER_TTL_SECONDS,
+  });
+}
+
+export function clearMemberSessionCookie() {
+  cookies().set(MEMBER_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure: env.isProduction,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
+}
+
+export async function getMemberSession(): Promise<MemberSession | null> {
+  const token = cookies().get(MEMBER_COOKIE_NAME)?.value;
+  if (!token) return null;
+  return verifyMemberSession(token);
 }
 
 // Veritabanından aktif aktörü + yetkili bölgelerini yükler.

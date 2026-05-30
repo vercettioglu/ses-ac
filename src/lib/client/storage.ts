@@ -5,6 +5,7 @@ export type Gender = 'FEMALE' | 'MALE' | 'UNSPECIFIED';
 
 export type LocalUser = {
   userId?: string;
+  email?: string; // üye ise e-posta (varsa hesap sahibi); yoksa anonim
   name?: string;
   contact?: string; // cep telefonu (TR)
   age?: number | null;

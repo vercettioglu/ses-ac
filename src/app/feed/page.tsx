@@ -43,7 +43,7 @@ export default function FeedPage() {
       return;
     }
     setLocal(user);
-    setShowMemberNudge(!user.name && !user.contact && !user.membershipPromptDismissed);
+    setShowMemberNudge(!user.email && !user.membershipPromptDismissed);
     void load(user);
     // Akışı görüntüledi → uygulama ikonundaki okunmamış rozetini temizle
     void clearBadge();
@@ -103,12 +103,13 @@ export default function FeedPage() {
               <UserPlus className="h-5 w-5" />
             </span>
             <div className="flex-1">
-              <p className="font-semibold">Bizi daha yakından tanıyın</p>
+              <p className="font-semibold">Üyeliğinizi oluşturun</p>
               <p className="text-sm text-muted-foreground">
-                İsterseniz adınızı bırakın; size daha iyi ulaşalım. Zorunlu değil.
+                Üye olun; başka cihazdan giriş yapın, şifrenizi unutursanız e-postayla sıfırlayın.
+                İsteğe bağlı.
               </p>
-              <Link href="/settings" className="mt-1 inline-block text-sm font-medium text-primary hover:underline">
-                Bilgilerimi ekle →
+              <Link href="/uye-ol" className="mt-1 inline-block text-sm font-medium text-primary hover:underline">
+                Üye ol →
               </Link>
             </div>
             <button

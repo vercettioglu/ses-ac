@@ -48,6 +48,10 @@ model User {
   id              String    @id @default(cuid())
   name            String? // Üye olmayan kullanıcılarda boş olabilir
   contact         String? // Cep telefonu (TR formatında, opsiyonel, doğrulamasız)
+  // Üyelik (opsiyonel): e-posta + şifre belirleyen kullanıcı başka cihazdan giriş yapabilir.
+  // Boşsa kullanıcı "anonim" (yalnızca cihazıyla hatırlanır).
+  email        String? @unique
+  passwordHash String?
   age             Int? // Yaş (opsiyonel)
   gender          Gender? // Cinsiyet (opsiyonel)
   occupation      String? // Meslek (opsiyonel)

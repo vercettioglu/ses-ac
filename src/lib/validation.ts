@@ -57,6 +57,26 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Şifre gerekli'),
 });
 
+// ---- Son kullanıcı (üye) hesabı ----
+
+// Üye olma: mevcut cihaz kullanıcısı (userId) varsa onu yükseltir; yoksa bölgeyle yeni üye açar.
+export const accountRegisterSchema = z.object({
+  userId: z.string().cuid().optional(),
+  email: z.string().trim().email('Geçerli bir e-posta girin'),
+  password: z.string().min(8, 'Şifre en az 8 karakter olmalı').max(200),
+  city: z.string().trim().max(80).optional().nullable(),
+  district: z.string().trim().max(80).optional().nullable(),
+  wantsNational: z.boolean().optional(),
+});
+export type AccountRegisterInput = z.infer<typeof accountRegisterSchema>;
+
+export const accountLoginSchema = z.object({
+  email: z.string().trim().email('Geçerli bir e-posta girin'),
+  password: z.string().min(1, 'Şifre gerekli'),
+  // Cihazın mevcut push aboneliği bu hesaba yeniden bağlanır (varsa).
+  endpoint: z.string().url().optional(),
+});
+
 // ---- Duyuru oluşturma ----
 
 export const announcementCreateSchema = z

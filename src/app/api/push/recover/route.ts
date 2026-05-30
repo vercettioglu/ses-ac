@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       found: true,
       user: {
         userId: u.id,
+        email: u.email,
         name: u.name,
         contact: u.contact,
         age: u.age,

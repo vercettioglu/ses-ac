@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, BellRing, Save, Smartphone, UserPlus, Moon } from 'lucide-react';
+import { Bell, BellRing, Save, Smartphone, UserPlus, Moon, LogOut, Mail } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select';
 import { RegionFields, type RegionValue } from '@/components/region-fields';
 import { IosInstallSheet } from '@/components/ios-install-sheet';
 import { apiPost } from '@/lib/client/api';
+import { logoutMember } from '@/lib/client/account';
 import { getLocalUser, setLocalUser, type LocalUser, type Gender } from '@/lib/client/storage';
 import { enablePush, hasActiveSubscription, showLocalNotification } from '@/lib/client/push-client';
 import { isIOS, isStandalone, pushSupported } from '@/lib/client/platform';
@@ -78,6 +79,8 @@ export default function SettingsPage() {
   const [mutedUntil, setMutedUntil] = useState<string | null>(null);
   const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [memberEmail, setMemberEmail] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const local = getLocalUser();
@@ -97,6 +100,7 @@ export default function SettingsPage() {
     setGender((local.gender as Gender) || '');
     setOccupation(local.occupation || '');
     setMutedUntil(local.mutedUntil || null);
+    setMemberEmail(local.email || null);
     setInitialSnap(
       makeSnap({
         name: local.name || '',
@@ -217,6 +221,12 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleLogout() {
+    setLoggingOut(true);
+    await logoutMember();
+    router.replace('/');
+  }
+
   if (!ready) return null;
 
   const currentSnap = makeSnap({
@@ -244,8 +254,8 @@ export default function SettingsPage() {
             <h2 className="font-semibold">İletişim bilgileriniz (isteğe bağlı)</h2>
           </div>
           <p className="mb-4 text-sm text-muted-foreground">
-            Hesap oluşturmanıza veya şifre belirlemenize gerek yok — cihazınız sizi hatırlar.
-            Dilerseniz size ulaşabilmemiz için bilgilerinizi bırakabilirsiniz.
+            Bu bilgiler isteğe bağlıdır; cihazınız sizi zaten hatırlar. Dilerseniz size daha iyi
+            ulaşabilmemiz için bırakabilirsiniz. (Üyelik için aşağıdaki “Hesap” bölümüne bakın.)
           </p>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -374,6 +384,40 @@ export default function SettingsPage() {
         <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="mb-4 font-semibold">Bölgeniz</h2>
           <RegionFields value={region} onChange={setRegion} />
+        </section>
+
+        {/* Hesap (üyelik / oturum) */}
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h2 className="mb-3 font-semibold">Hesap</h2>
+          {memberEmail ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Üye:</span>
+                <strong className="break-all">{memberEmail}</strong>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleLogout}
+                disabled={loggingOut}
+              >
+                <LogOut className="h-4 w-4" />
+                {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Üye olursanız başka cihazdan giriş yapabilir, şifrenizi unutursanız e-postayla
+                sıfırlayabilirsiniz. İsteğe bağlıdır.
+              </p>
+              <Button className="w-full" onClick={() => router.push('/uye-ol')}>
+                <UserPlus className="h-4 w-4" />
+                Üye ol
+              </Button>
+            </div>
+          )}
         </section>
 
       </main>

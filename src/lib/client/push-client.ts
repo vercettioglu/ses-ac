@@ -91,6 +91,7 @@ export async function disablePush(): Promise<void> {
 
 export type RecoveredUser = {
   userId: string;
+  email: string | null;
   name: string | null;
   contact: string | null;
   age: number | null;
@@ -175,5 +176,18 @@ export async function hasActiveSubscription(): Promise<boolean> {
     return Boolean(sub);
   } catch {
     return false;
+  }
+}
+
+// Cihazın mevcut push abonelik endpoint'ini döndürür (yoksa null).
+// Üye girişinde bu endpoint sunucuya gönderilir → abonelik o hesaba bağlanır.
+export async function getEndpoint(): Promise<string | null> {
+  if (!pushSupported()) return null;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    return sub?.endpoint ?? null;
+  } catch {
+    return null;
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Megaphone, Bell, MapPin, ShieldCheck, Smartphone, ArrowRight, Compass, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegionFields, type RegionValue } from '@/components/region-fields';
@@ -37,6 +38,7 @@ export default function HomePage() {
       if (recovered) {
         setLocalUser({
           userId: recovered.userId,
+          email: recovered.email ?? undefined,
           name: recovered.name ?? undefined,
           contact: recovered.contact ?? undefined,
           age: recovered.age,
@@ -214,6 +216,13 @@ export default function HomePage() {
           </p>
         </div>
       )}
+
+      <p className="mt-5 text-center text-sm text-muted-foreground">
+        Zaten üye misiniz?{' '}
+        <Link href="/giris" className="font-medium text-primary hover:underline">
+          Giriş yapın
+        </Link>
+      </p>
 
       <IosInstallSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </main>
