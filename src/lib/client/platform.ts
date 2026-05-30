@@ -47,3 +47,28 @@ export function notificationPermission(): NotificationPermission | 'unsupported'
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
   return Notification.permission;
 }
+
+export type OSKind = 'ios' | 'android' | 'macos' | 'windows' | 'linux' | 'unknown';
+
+export function detectOS(): OSKind {
+  if (typeof navigator === 'undefined') return 'unknown';
+  const ua = navigator.userAgent || '';
+  if (isIOS()) return 'ios';
+  if (/Android/i.test(ua)) return 'android';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'macos';
+  if (/Windows/i.test(ua)) return 'windows';
+  if (/Linux|X11|CrOS/i.test(ua)) return 'linux';
+  return 'unknown';
+}
+
+// Bildirim ayarlarını yönlendirmek için tarayıcı adı (Türkçe yardım metninde kullanılır).
+export function getBrowserName(): string {
+  if (typeof navigator === 'undefined') return 'tarayıcınız';
+  const ua = navigator.userAgent || '';
+  if (/Edg\//.test(ua)) return 'Microsoft Edge';
+  if (/OPR\/|Opera/.test(ua)) return 'Opera';
+  if (/Chrome\//.test(ua)) return 'Google Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua)) return 'Safari';
+  return 'tarayıcınız';
+}

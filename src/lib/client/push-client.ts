@@ -129,6 +129,26 @@ export async function recoverFromDevice(timeoutMs = 2500): Promise<RecoveredUser
   return Promise.race([work, timeout]);
 }
 
+// Cihaz üzerinde yerel bir bildirim gösterir (gerçek push beklemeden OS gösterimini test eder).
+// OS/tarayıcı bildirimi engelliyorsa kullanıcı bunu hemen fark eder.
+export async function showLocalNotification(title: string, body: string): Promise<boolean> {
+  if (!pushSupported()) return false;
+  try {
+    if (Notification.permission !== 'granted') return false;
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/badge-72.png',
+      tag: 'susma-local-test',
+      data: { url: '/feed' },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function hasActiveSubscription(): Promise<boolean> {
   if (!pushSupported()) return false;
   try {

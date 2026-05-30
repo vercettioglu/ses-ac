@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { Bell, CheckCircle2, Smartphone, ArrowRight, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IosInstallSheet } from '@/components/ios-install-sheet';
-import { enablePush } from '@/lib/client/push-client';
+import { NotificationHelp } from '@/components/notification-help';
+import { enablePush, showLocalNotification } from '@/lib/client/push-client';
 import { isIOS, isStandalone, pushSupported, notificationPermission } from '@/lib/client/platform';
 import { getLocalUser, setLocalUser } from '@/lib/client/storage';
 
@@ -60,6 +61,9 @@ export default function SetupPage() {
     if (res.ok) {
       setLocalUser({ notificationsEnabled: true });
       setStatus('done');
+      // Anında onay bildirimi: kullanıcı bildirimin gerçekten göründüğünü hemen görür.
+      // (OS/tarayıcı engelliyse görmez → /setup'taki yardım devreye girer.)
+      void showLocalNotification('Susma bildirimleri açık ✅', 'Bölgenizdeki duyuruları artık anında alacaksınız.');
     } else if (res.reason === 'denied') {
       setStatus('denied');
       setMessage(res.message);
@@ -88,6 +92,14 @@ export default function SetupPage() {
           <Button className="mt-6 w-full" size="lg" onClick={() => router.push('/feed')}>
             Duyuruları Gör
           </Button>
+
+          <p className="mx-auto mt-6 max-w-xs text-sm text-muted-foreground">
+            Onay için bir test bildirimi gönderdik. <strong>Görmediyseniz</strong>, cihazınızın
+            bildirim ayarını açmanız gerekebilir:
+          </p>
+          <div className="mt-3 text-left">
+            <NotificationHelp />
+          </div>
         </div>
       ) : (
         <>

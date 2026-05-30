@@ -12,8 +12,9 @@ import { RegionFields, type RegionValue } from '@/components/region-fields';
 import { IosInstallSheet } from '@/components/ios-install-sheet';
 import { apiPost } from '@/lib/client/api';
 import { getLocalUser, setLocalUser, type LocalUser, type Gender } from '@/lib/client/storage';
-import { enablePush, hasActiveSubscription } from '@/lib/client/push-client';
+import { enablePush, hasActiveSubscription, showLocalNotification } from '@/lib/client/push-client';
 import { isIOS, isStandalone, pushSupported } from '@/lib/client/platform';
+import { NotificationHelp } from '@/components/notification-help';
 import { isValidTrMobile, normalizeTrMobile } from '@/lib/phone';
 
 type NotifState = 'on' | 'off' | 'unsupported' | 'busy';
@@ -198,6 +199,7 @@ export default function SettingsPage() {
     if (res.ok) {
       setLocalUser({ notificationsEnabled: true });
       setNotif('on');
+      void showLocalNotification('Susma bildirimleri açık ✅', 'Bölgenizdeki duyuruları artık anında alacaksınız.');
     } else {
       setNotif('off');
       setNotifMsg(res.message);
@@ -359,6 +361,12 @@ export default function SettingsPage() {
               </div>
               {notifMsg && <p className="mt-3 text-sm text-destructive">{notifMsg}</p>}
             </>
+          )}
+
+          {notif === 'on' && (
+            <div className="mt-4">
+              <NotificationHelp />
+            </div>
           )}
         </section>
 
