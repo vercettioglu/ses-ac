@@ -77,6 +77,15 @@ export const accountLoginSchema = z.object({
   endpoint: z.string().url().optional(),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email('Geçerli bir e-posta girin'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10, 'Geçersiz bağlantı'),
+  password: z.string().min(8, 'Şifre en az 8 karakter olmalı').max(200),
+});
+
 // ---- Duyuru oluşturma ----
 
 export const announcementCreateSchema = z

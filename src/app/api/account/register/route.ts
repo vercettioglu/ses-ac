@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ok, fail, handleError, assertSameOrigin } from '@/lib/http';
 import { accountRegisterSchema } from '@/lib/validation';
 import { hashPassword, signMemberSession, setMemberSessionCookie } from '@/lib/auth';
+import { sendMail, brandedHtml } from '@/lib/mail';
 import { publicUser } from '../_shared';
 
 export const runtime = 'nodejs';
@@ -59,7 +60,24 @@ export async function POST(req: NextRequest) {
     const token = await signMemberSession({ sub: user.id, email });
     setMemberSessionCookie(token);
 
-    // NOT: Hoş geldin e-postası bir sonraki adımda (nodemailer → yerel Postfix) eklenecek.
+    // Hoş geldin e-postası (best-effort; başarısız olsa da üyelik tamamlanır).
+    await sendMail({
+      to: email,
+      subject: 'Susma’ya hoş geldiniz',
+      text:
+        'Susma üyeliğiniz oluşturuldu.\n\n' +
+        'Artık başka bir cihazdan giriş yapıp bölgenize ulaşabilir, şifrenizi unutursanız ' +
+        'e-postayla sıfırlayabilirsiniz.\n\n' +
+        'Duyurularınız: https://susma.org/feed\n\nSusma',
+      html: brandedHtml({
+        heading: 'Üyeliğiniz oluşturuldu',
+        bodyHtml:
+          '<p>Susma üyeliğiniz oluşturuldu. Artık başka bir cihazdan giriş yapıp bölgenize ' +
+          'ulaşabilir, şifrenizi unutursanız e-postayla sıfırlayabilirsiniz.</p>' +
+          '<p><a href="https://susma.org/feed" style="display:inline-block;background:#d8392b;color:#fff;' +
+          'text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Duyurularımı gör</a></p>',
+      }),
+    });
 
     return ok({ user: publicUser(user) });
   } catch (err) {

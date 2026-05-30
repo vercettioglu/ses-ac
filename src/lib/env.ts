@@ -21,6 +21,16 @@ export const env = {
   get appUrl() {
     return process.env.APP_URL ?? 'http://localhost:3000';
   },
+  // E-posta (self-hosted Postfix → 127.0.0.1:25). Düşük hacim: hoş geldin + şifre sıfırlama.
+  get mailHost() {
+    return process.env.MAIL_HOST ?? '127.0.0.1';
+  },
+  get mailPort() {
+    return Number(process.env.MAIL_PORT ?? '25');
+  },
+  get mailFrom() {
+    return process.env.MAIL_FROM ?? 'Susma <noreply@susma.org>';
+  },
   get isProduction() {
     return process.env.NODE_ENV === 'production';
   },

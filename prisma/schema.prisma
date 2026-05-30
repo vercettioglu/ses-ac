@@ -52,6 +52,9 @@ model User {
   // Boşsa kullanıcı "anonim" (yalnızca cihazıyla hatırlanır).
   email        String? @unique
   passwordHash String?
+  // Şifre sıfırlama: token'ın yalnızca SHA-256 özeti saklanır (ham token e-postada).
+  resetTokenHash      String?
+  resetTokenExpiresAt DateTime?
   age             Int? // Yaş (opsiyonel)
   gender          Gender? // Cinsiyet (opsiyonel)
   occupation      String? // Meslek (opsiyonel)

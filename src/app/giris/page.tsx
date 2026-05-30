@@ -66,6 +66,11 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <div className="text-right">
+            <Link href="/sifremi-unuttum" className="text-sm font-medium text-primary hover:underline">
+              Şifremi unuttum?
+            </Link>
+          </div>
         </div>
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}
         <Button type="submit" className="w-full" size="lg" disabled={loading}>
