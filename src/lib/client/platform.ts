@@ -61,6 +61,14 @@ export function detectOS(): OSKind {
   return 'unknown';
 }
 
+// iOS'ta Safari DIŞI bir tarayıcı mı? (Chrome/Firefox/Edge/Opera/DuckDuckGo vb.)
+// iOS'ta push'lu "Ana Ekrana Ekle" yalnızca Safari'de güvenilir çalışır.
+export function isIosNonSafari(): boolean {
+  if (!isIOS()) return false;
+  const ua = navigator.userAgent || '';
+  return /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|YaBrowser|Mercury/i.test(ua);
+}
+
 // Bildirim ayarlarını yönlendirmek için tarayıcı adı (Türkçe yardım metninde kullanılır).
 export function getBrowserName(): string {
   if (typeof navigator === 'undefined') return 'tarayıcınız';

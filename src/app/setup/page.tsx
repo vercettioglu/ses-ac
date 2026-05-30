@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { IosInstallSheet } from '@/components/ios-install-sheet';
 import { NotificationHelp } from '@/components/notification-help';
 import { enablePush, showLocalNotification } from '@/lib/client/push-client';
-import { isIOS, isStandalone, pushSupported, notificationPermission } from '@/lib/client/platform';
+import { canInstall, promptInstall } from '@/lib/client/install';
+import { isIOS, isAndroid, isStandalone, pushSupported, notificationPermission } from '@/lib/client/platform';
 import { getLocalUser, setLocalUser } from '@/lib/client/storage';
 
-type Status = 'idle' | 'enabling' | 'done' | 'denied' | 'error' | 'unsupported';
+type Status = 'idle' | 'enabling' | 'install' | 'done' | 'denied' | 'error' | 'unsupported';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -60,10 +61,12 @@ export default function SetupPage() {
     const res = await enablePush(uid);
     if (res.ok) {
       setLocalUser({ notificationsEnabled: true });
-      setStatus('done');
-      // Anında onay bildirimi: kullanıcı bildirimin gerçekten göründüğünü hemen görür.
-      // (OS/tarayıcı engelliyse görmez → /setup'taki yardım devreye girer.)
-      void showLocalNotification('Susma bildirimleri açık ✅', 'Bölgenizdeki duyuruları artık anında alacaksınız.');
+      // Android'de henüz kurulu değilse → tek-tık ana ekrana ekleme adımı (zorunlu)
+      if (isAndroid() && !isStandalone() && canInstall()) {
+        setStatus('install');
+      } else {
+        finishSetup();
+      }
     } else if (res.reason === 'denied') {
       setStatus('denied');
       setMessage(res.message);
@@ -73,6 +76,22 @@ export default function SetupPage() {
     } else {
       setStatus('error');
       setMessage(res.message);
+    }
+  }
+
+  function finishSetup() {
+    setStatus('done');
+    // Anında onay bildirimi: kullanıcı bildirimin gerçekten göründüğünü hemen görür.
+    void showLocalNotification('Susma bildirimleri açık ✅', 'Bölgenizdeki duyuruları artık anında alacaksınız.');
+  }
+
+  async function installApp() {
+    setMessage('');
+    const outcome = await promptInstall();
+    if (outcome === 'accepted' || outcome === 'unavailable') {
+      finishSetup();
+    } else {
+      setMessage('Kurulumu daha sonra da yapabilirsiniz.');
     }
   }
 
@@ -100,6 +119,27 @@ export default function SetupPage() {
           <div className="mt-3 text-left">
             <NotificationHelp />
           </div>
+        </div>
+      ) : status === 'install' ? (
+        <div className="py-10 text-center">
+          <span className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+            <Smartphone className="h-10 w-10" />
+          </span>
+          <h1 className="text-2xl font-bold">Son adım: ana ekrana ekleyin</h1>
+          <p className="mx-auto mt-2 max-w-xs text-muted-foreground">
+            Susma’yı ana ekranınıza ekleyin; duyuruları ve bildirimleri uygulama gibi alın.
+          </p>
+          <Button className="mt-6 w-full" size="lg" onClick={installApp}>
+            Ana Ekrana Ekle
+          </Button>
+          {message && <p className="mt-3 text-sm text-muted-foreground">{message}</p>}
+          <button
+            onClick={finishSetup}
+            className="mx-auto mt-4 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Şimdilik devam et
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       ) : (
         <>

@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Megaphone, Bell, MapPin, ShieldCheck, Smartphone, ArrowRight } from 'lucide-react';
+import { Megaphone, Bell, MapPin, ShieldCheck, Smartphone, ArrowRight, Compass, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegionFields, type RegionValue } from '@/components/region-fields';
 import { IosInstallSheet } from '@/components/ios-install-sheet';
 import { apiPost } from '@/lib/client/api';
 import { getLocalUser, setLocalUser } from '@/lib/client/storage';
 import { recoverFromDevice } from '@/lib/client/push-client';
-import { isIOS, isStandalone } from '@/lib/client/platform';
+import { isIOS, isStandalone, isIosNonSafari, getBrowserName } from '@/lib/client/platform';
 
 export default function HomePage() {
   const router = useRouter();
@@ -20,6 +20,9 @@ export default function HomePage() {
 
   // iOS Safari (henüz ana ekrana eklenmemiş) → önce kurulum yönlendirmesi
   const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
+  const [iosOpenInSafari, setIosOpenInSafari] = useState(false);
+  const [browserName, setBrowserName] = useState('tarayıcınız');
+  const [copied, setCopied] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [browseAnyway, setBrowseAnyway] = useState(false);
 
@@ -49,9 +52,16 @@ export default function HomePage() {
         router.replace('/feed');
         return;
       }
-      // iPhone/iPad Safari'de, henüz ana ekrana eklenmemişse: önce kur, bölgeyi PWA'da seç
-      if (isIOS() && !isStandalone()) {
-        setIosNeedsInstall(true);
+      // iPhone/iPad, henüz ana ekrana eklenmemiş:
+      if (!isStandalone() && isIOS()) {
+        if (isIosNonSafari()) {
+          // iOS'ta Safari dışı tarayıcı → push'lu kurulum yalnızca Safari'de çalışır
+          setIosOpenInSafari(true);
+          setBrowserName(getBrowserName());
+        } else {
+          // Safari → önce ana ekrana ekle, bölgeyi PWA'da seç
+          setIosNeedsInstall(true);
+        }
       }
       setReady(true);
     })();
@@ -85,8 +95,19 @@ export default function HomePage() {
     }
   }
 
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText('https://susma.org');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* yoksay */
+    }
+  }
+
   if (!ready) return null;
 
+  const showOpenInSafari = iosOpenInSafari && !browseAnyway;
   const showInstallFirst = iosNeedsInstall && !browseAnyway;
 
   return (
@@ -121,8 +142,37 @@ export default function HomePage() {
         })}
       </ul>
 
-      {showInstallFirst ? (
-        // iOS: önce ana ekrana ekle, bölgeyi PWA içinde seç (Safari'de seçim taşınmaz — Apple kısıtı)
+      {showOpenInSafari ? (
+        // iOS'ta Safari dışı tarayıcı → push'lu kurulum yalnızca Safari'de mümkün
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <div className="mb-2 flex items-center gap-2 font-semibold">
+            <Compass className="h-5 w-5 text-primary" />
+            Bu sayfayı Safari’de açın
+          </div>
+          <p className="text-sm text-muted-foreground">
+            iPhone’da bildirim alabilmek için Susma’nın <strong>Safari</strong>’de açılması gerekir
+            ({browserName} bildirim destekli kurulumu desteklemiyor — bu bir iOS kısıtıdır). Adresi
+            kopyalayıp Safari’ye yapıştırın ya da {browserName} menüsünden <strong>“Safari’de Aç”</strong> seçin.
+          </p>
+          <div className="mt-4 flex items-center gap-2">
+            <code className="flex-1 truncate rounded-lg border border-border bg-muted px-3 py-2 text-sm">
+              https://susma.org
+            </code>
+            <Button variant="outline" onClick={copyAddress}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? 'Kopyalandı' : 'Kopyala'}
+            </Button>
+          </div>
+          <button
+            onClick={() => setBrowseAnyway(true)}
+            className="mx-auto mt-4 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Şimdilik bu tarayıcıda göz at (bildirimsiz)
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      ) : showInstallFirst ? (
+        // iOS Safari: önce ana ekrana ekle, bölgeyi PWA içinde seç (Safari'de seçim taşınmaz — Apple kısıtı)
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="mb-2 flex items-center gap-2 font-semibold">
             <Smartphone className="h-5 w-5 text-primary" />
