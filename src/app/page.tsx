@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Megaphone, Bell, MapPin, ShieldCheck } from 'lucide-react';
+import { Megaphone, Bell, MapPin, ShieldCheck, Smartphone, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegionFields, type RegionValue } from '@/components/region-fields';
+import { IosInstallSheet } from '@/components/ios-install-sheet';
 import { apiPost } from '@/lib/client/api';
 import { getLocalUser, setLocalUser } from '@/lib/client/storage';
 import { recoverFromDevice } from '@/lib/client/push-client';
+import { isIOS, isStandalone } from '@/lib/client/platform';
 
 export default function HomePage() {
   const router = useRouter();
@@ -16,14 +18,17 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // iOS Safari (henüz ana ekrana eklenmemiş) → önce kurulum yönlendirmesi
+  const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [browseAnyway, setBrowseAnyway] = useState(false);
+
   useEffect(() => {
     const local = getLocalUser();
     if (local?.userId) {
-      // Daha önce kayıt olmuş: bildirim izni verdiyse akışa, vermediyse izin adımına git
       router.replace(local.notificationsEnabled ? '/feed' : '/setup');
       return;
     }
-    // localStorage boş → cihazın push endpoint'inden eski kaydı (ad/telefon/bölge) kurtarmayı dene
     (async () => {
       const recovered = await recoverFromDevice();
       if (recovered) {
@@ -43,6 +48,10 @@ export default function HomePage() {
         });
         router.replace('/feed');
         return;
+      }
+      // iPhone/iPad Safari'de, henüz ana ekrana eklenmemişse: önce kur, bölgeyi PWA'da seç
+      if (isIOS() && !isStandalone()) {
+        setIosNeedsInstall(true);
       }
       setReady(true);
     })();
@@ -78,6 +87,8 @@ export default function HomePage() {
 
   if (!ready) return null;
 
+  const showInstallFirst = iosNeedsInstall && !browseAnyway;
+
   return (
     <main className="container max-w-md py-8">
       <div className="mb-8 text-center">
@@ -110,20 +121,51 @@ export default function HomePage() {
         })}
       </ul>
 
-      <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">Bölgenizi seçin</h2>
-        <RegionFields value={region} onChange={setRegion} />
+      {showInstallFirst ? (
+        // iOS: önce ana ekrana ekle, bölgeyi PWA içinde seç (Safari'de seçim taşınmaz — Apple kısıtı)
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <div className="mb-2 flex items-center gap-2 font-semibold">
+            <Smartphone className="h-5 w-5 text-primary" />
+            iPhone’da kurulum
+          </div>
+          <p className="text-sm text-muted-foreground">
+            iPhone’da bildirim alabilmek için önce Susma’yı <strong>ana ekranınıza ekleyin</strong>,
+            sonra oradaki Susma simgesinden açıp bölgenizi seçin.
+          </p>
+          <Button className="mt-4 w-full" size="lg" onClick={() => setSheetOpen(true)}>
+            Ana ekrana nasıl eklerim?
+          </Button>
+          <p className="mt-3 rounded-lg bg-primary/5 p-3 text-sm text-muted-foreground">
+            📱 <strong>Zaten eklediyseniz:</strong> bu sekmeyi kapatıp ana ekranınızdaki{' '}
+            <strong>Susma</strong> simgesinden açın. (iPhone’da tarayıcı sekmesi ile uygulama ayrı
+            çalışır; seçimler birbirine taşınmaz.)
+          </p>
+          <button
+            onClick={() => setBrowseAnyway(true)}
+            className="mx-auto mt-4 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Şimdilik bu tarayıcıda göz at (bildirimsiz)
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold">Bölgenizi seçin</h2>
+          <RegionFields value={region} onChange={setRegion} />
 
-        {error && <p className="mt-4 text-sm font-medium text-destructive">{error}</p>}
+          {error && <p className="mt-4 text-sm font-medium text-destructive">{error}</p>}
 
-        <Button className="mt-5 w-full" size="lg" onClick={handleSubmit} disabled={loading}>
-          {loading ? 'Kaydediliyor…' : 'Bölgemi Seç ve Devam Et'}
-        </Button>
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          Devam ederek seçtiğiniz bölgeye ait duyuruları almayı kabul edersiniz. Bilgileriniz
-          yalnızca duyuru göndermek için kullanılır.
-        </p>
-      </div>
+          <Button className="mt-5 w-full" size="lg" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Kaydediliyor…' : 'Bölgemi Seç ve Devam Et'}
+          </Button>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Devam ederek seçtiğiniz bölgeye ait duyuruları almayı kabul edersiniz. Bilgileriniz
+            yalnızca duyuru göndermek için kullanılır.
+          </p>
+        </div>
+      )}
+
+      <IosInstallSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </main>
   );
 }
