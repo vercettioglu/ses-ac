@@ -94,6 +94,14 @@ export function NotificationHelp({ defaultOpen = false }: { defaultOpen?: boolea
           ))}
         </ol>
       )}
+
+      {os === 'macos' && !browser.includes('Safari') && (
+        <p className="mt-3 rounded-lg bg-primary/5 p-3 text-sm text-muted-foreground">
+          💡 Masaüstünde tam uygulama deneyimi (kapalıyken de ikon rozeti ve kendi bildirim kimliği)
+          için Susma’yı <strong>Safari</strong>’de açıp <strong>Dosya → Dock’a Ekle</strong> ile
+          kurun. Chrome’da bildirimler çalışır ama macOS bunları tarayıcıya bağlar.
+        </p>
+      )}
     </div>
   );
 }
