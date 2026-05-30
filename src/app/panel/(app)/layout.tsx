@@ -25,7 +25,7 @@ export default async function PanelAppLayout({ children }: { children: React.Rea
 
   return (
     <DashboardShell
-      brand="Ses Aç · Gönderici"
+      brand="Susma · Gönderici"
       items={nav}
       name={actor.name}
       role={actor.role}

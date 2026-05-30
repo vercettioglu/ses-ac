@@ -4,6 +4,6 @@ export const metadata = { title: 'Yönetici Girişi' };
 
 export default function AdminLoginPage() {
   return (
-    <LoginForm title="Yönetici Girişi" subtitle="Ses Aç yönetim paneli" context="admin" />
+    <LoginForm title="Yönetici Girişi" subtitle="Susma yönetim paneli" context="admin" />
   );
 }

@@ -301,7 +301,7 @@ export default function PanelNewAnnouncementPage() {
                 <div className="line-clamp-2 text-sm text-muted-foreground">
                   {body || 'Mesaj metni burada görünecek.'}
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">Ses Aç · {targetText}</div>
+                <div className="mt-1 text-xs text-muted-foreground">Susma · {targetText}</div>
               </div>
             </div>
           </div>

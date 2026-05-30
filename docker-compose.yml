@@ -1,27 +1,27 @@
 # Lokal geliştirme için PostgreSQL.
 # Çalıştırma:  docker compose up -d
 # Bu durumda .env içindeki DATABASE_URL:
-#   postgresql://sesac:sesac@localhost:5432/sesac?schema=public
+#   postgresql://susma:susma@localhost:5432/susma?schema=public
 #
 # NOT: Makinenizde Docker yoksa README'deki "Docker olmadan Postgres" bölümüne bakın.
 services:
   db:
     image: postgres:16-alpine
-    container_name: sesac-db
+    container_name: susma-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: sesac
-      POSTGRES_PASSWORD: sesac
-      POSTGRES_DB: sesac
+      POSTGRES_USER: susma
+      POSTGRES_PASSWORD: susma
+      POSTGRES_DB: susma
     ports:
       - '5432:5432'
     volumes:
-      - sesac_pgdata:/var/lib/postgresql/data
+      - susma_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U sesac -d sesac']
+      test: ['CMD-SHELL', 'pg_isready -U susma -d susma']
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  sesac_pgdata:
+  susma_pgdata:

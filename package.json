@@ -1,8 +1,8 @@
 {
-  "name": "ses-ac",
+  "name": "susma",
   "version": "0.1.0",
   "private": true,
-  "description": "Ses Aç — mobil öncelikli, izinli, bölge bazlı PWA web push duyuru sistemi",
+  "description": "Susma — mobil öncelikli, izinli, bölge bazlı PWA web push duyuru sistemi",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",

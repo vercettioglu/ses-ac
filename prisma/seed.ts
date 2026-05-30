@@ -55,7 +55,7 @@ async function main() {
   // ---- Yönetici / gönderici hesapları ----
   const superAdmin = await ensureAdmin({
     name: 'Sistem Yöneticisi',
-    email: 'superadmin@ses.ac',
+    email: 'superadmin@susma.org',
     role: 'SUPER_ADMIN',
     senderType: 'INDIVIDUAL',
     permissions: [],
@@ -63,14 +63,14 @@ async function main() {
   // Bölge yöneticisi aynı zamanda gönderici (kurumsal) olabilir
   const regionAdmin = await ensureAdmin({
     name: 'Antalya İl Duyuru Ekibi',
-    email: 'antalya.admin@ses.ac',
+    email: 'antalya.admin@susma.org',
     role: 'REGION_ADMIN',
     senderType: 'ORGANIZATION',
     permissions: [{ city: 'Antalya', district: null }],
   });
   const sender = await ensureAdmin({
     name: 'Konyaaltı Duyuru Ekibi',
-    email: 'konyaalti.sender@ses.ac',
+    email: 'konyaalti.sender@susma.org',
     role: 'SENDER',
     senderType: 'ORGANIZATION',
     permissions: [{ city: 'Antalya', district: 'Konyaaltı' }],
@@ -162,9 +162,9 @@ async function main() {
   if (missing.length) console.log(`  ✓ ${missing.length} duyuruya sayısal kimlik atandı`);
 
   console.log('\nSeed tamamlandı. Giriş bilgileri:');
-  console.log('  SUPER_ADMIN : superadmin@ses.ac');
-  console.log('  REGION_ADMIN: antalya.admin@ses.ac');
-  console.log('  SENDER      : konyaalti.sender@ses.ac');
+  console.log('  SUPER_ADMIN : superadmin@susma.org');
+  console.log('  REGION_ADMIN: antalya.admin@susma.org');
+  console.log('  SENDER      : konyaalti.sender@susma.org');
   console.log(`  Şifre (hepsi): ${PASSWORD}`);
 }
 

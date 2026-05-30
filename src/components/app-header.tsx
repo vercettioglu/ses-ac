@@ -10,7 +10,7 @@ export function AppHeader({ showSettings = true }: { showSettings?: boolean }) {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Megaphone className="h-5 w-5" />
           </span>
-          <span className="text-lg">Ses Aç</span>
+          <span className="text-lg">Susma</span>
         </Link>
         {showSettings && (
           <Link

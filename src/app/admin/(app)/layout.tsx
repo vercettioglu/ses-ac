@@ -26,7 +26,7 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
 
   return (
     <DashboardShell
-      brand="Ses Aç · Yönetim"
+      brand="Susma · Yönetim"
       items={NAV}
       name={actor.name}
       role={actor.role}

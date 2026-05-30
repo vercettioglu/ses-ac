@@ -1,4 +1,4 @@
-/* Ses Aç — Service Worker
+/* Susma — Service Worker
  * Görevler: install / activate / push / notificationclick
  * Not: Push yalnızca HTTPS (veya localhost) altında çalışır.
  */
@@ -17,10 +17,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch (e) {
-    payload = { title: 'Ses Aç', body: event.data ? event.data.text() : '' };
+    payload = { title: 'Susma', body: event.data ? event.data.text() : '' };
   }
 
-  const title = payload.title || 'Ses Aç';
+  const title = payload.title || 'Susma';
   const options = {
     body: payload.body || '',
     icon: payload.icon || '/icons/icon-192.png',

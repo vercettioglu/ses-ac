@@ -109,7 +109,7 @@ export default function SetupPage() {
                   iPhone / iPad için bir adım daha
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Bildirim alabilmek için Ses Aç’ı önce ana ekranınıza eklemelisiniz. Adımları
+                  Bildirim alabilmek için Susma’yı önce ana ekranınıza eklemelisiniz. Adımları
                   görmek için aşağıdaki butona dokunun.
                 </p>
                 <Button className="mt-4 w-full" size="lg" onClick={() => setSheetOpen(true)}>
@@ -117,7 +117,7 @@ export default function SetupPage() {
                 </Button>
               </div>
               <p className="text-center text-sm text-muted-foreground">
-                Ana ekrana ekledikten sonra, oradaki <strong>Ses Aç</strong> simgesinden açıp bu
+                Ana ekrana ekledikten sonra, oradaki <strong>Susma</strong> simgesinden açıp bu
                 adımı tamamlayın.
               </p>
             </div>

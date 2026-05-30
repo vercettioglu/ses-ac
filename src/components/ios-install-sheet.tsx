@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: Smartphone,
     title: 'Ana ekrandan açın',
-    desc: 'Ana ekranınızdaki Ses Aç simgesine dokunarak uygulamayı açın.',
+    desc: 'Ana ekranınızdaki Susma simgesine dokunarak uygulamayı açın.',
   },
   {
     icon: Bell,
@@ -59,7 +59,7 @@ export function IosInstallSheet({ open, onClose }: { open: boolean; onClose: () 
 
         <h2 className="mb-1 text-lg font-bold">Bildirimleri açmak için</h2>
         <p className="mb-5 text-sm text-muted-foreground">
-          iPhone ve iPad’de bildirim alabilmek için Ses Aç’ı önce ana ekranınıza eklemeniz gerekir.
+          iPhone ve iPad’de bildirim alabilmek için Susma’yı önce ana ekranınıza eklemeniz gerekir.
           Aşağıdaki adımları izleyin:
         </p>
 

@@ -1,10 +1,10 @@
-# Ses Aç
+# Susma
 
 Mobil öncelikli, **uygulama indirmeden çalışan** (PWA) web push duyuru sistemi.
 Yerel/topluluk ekiplerinin, kendilerini takip eden kullanıcılara **izinli** ve **bölge bazlı**
 (il/ilçe) anlık bildirim göndermesini sağlar.
 
-- Marka: **Ses Aç** · Domain varsayımı: `https://ses.ac`
+- Marka: **Susma** · Domain varsayımı: `https://susma.org`
 - Ürün tarafsız bir “duyuru ve bildirim alma” sistemidir.
 
 ## Özellikler
@@ -45,11 +45,11 @@ cp .env.example .env
 
 | Değişken | Açıklama |
 |---|---|
-| `DATABASE_URL` | PostgreSQL bağlantısı. Docker için: `postgresql://sesac:sesac@localhost:5432/sesac?schema=public` |
+| `DATABASE_URL` | PostgreSQL bağlantısı. Docker için: `postgresql://susma:susma@localhost:5432/susma?schema=public` |
 | `NEXTAUTH_SECRET` | Oturum (JWT) imzalama anahtarı. `openssl rand -base64 32` ile üretin |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push anahtar çifti (`npm run vapid`) |
-| `VAPID_SUBJECT` | `mailto:admin@ses.ac` |
-| `APP_URL` | Üretimde `https://ses.ac`, lokalde `http://localhost:3000` |
+| `VAPID_SUBJECT` | `mailto:admin@susma.org` |
+| `APP_URL` | Üretimde `https://susma.org`, lokalde `http://localhost:3000` |
 
 ### 4) VAPID anahtarı üretimi
 ```bash
@@ -68,9 +68,9 @@ npm run db:seed             # örnek veri + hesaplar
 Docker yoksa yerel bir Postgres kullanabilirsiniz:
 ```bash
 brew install postgresql@16 && brew services start postgresql@16
-createdb sesac
+createdb susma
 # .env içinde:
-# DATABASE_URL=postgresql://<kullanıcı>@localhost:5432/sesac?schema=public
+# DATABASE_URL=postgresql://<kullanıcı>@localhost:5432/susma?schema=public
 npm run db:migrate && npm run db:seed
 ```
 
@@ -82,9 +82,9 @@ npm run dev      # http://localhost:3000
 ### Seed ile gelen hesaplar
 | Rol | E-posta | Şifre |
 |---|---|---|
-| SUPER_ADMIN | `superadmin@ses.ac` | `SesAc!2025` |
-| REGION_ADMIN | `antalya.admin@ses.ac` | `SesAc!2025` |
-| SENDER | `konyaalti.sender@ses.ac` | `SesAc!2025` |
+| SUPER_ADMIN | `superadmin@susma.org` | `SesAc!2025` |
+| REGION_ADMIN | `antalya.admin@susma.org` | `SesAc!2025` |
+| SENDER | `konyaalti.sender@susma.org` | `SesAc!2025` |
 
 > Şifreyi `SEED_PASSWORD` ortam değişkeniyle değiştirebilirsiniz. **Üretimde mutlaka değiştirin.**
 
@@ -132,7 +132,7 @@ iOS’ta web push için **iOS/iPadOS 16.4+** ve uygulamanın **Ana Ekrana Eklenm
 1. Siteyi **Safari**’de açın (HTTPS adresi).
 2. Alttaki **Paylaş** simgesine dokunun.
 3. **“Ana Ekrana Ekle”** seçeneğini seçin.
-4. Ana ekrandaki **Ses Aç** simgesinden uygulamayı açın.
+4. Ana ekrandaki **Susma** simgesinden uygulamayı açın.
 5. **“Bildirimleri Aç”**a dokunun ve izni verin.
 
 Uygulama içinde bu adımlar, iPhone’da PWA olarak açılmamışsa otomatik olarak alttan açılan

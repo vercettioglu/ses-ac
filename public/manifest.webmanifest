@@ -1,6 +1,6 @@
 {
-  "name": "Ses Aç",
-  "short_name": "Ses Aç",
+  "name": "Susma",
+  "short_name": "Susma",
   "description": "Bölgenizdeki önemli duyuruları anında alın.",
   "start_url": "/?source=pwa",
   "scope": "/",

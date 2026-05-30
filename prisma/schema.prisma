@@ -1,4 +1,4 @@
-// Ses Aç — Prisma şeması
+// Susma — Prisma şeması
 // PostgreSQL üzerinde çalışır. Migration: `npm run db:migrate -- --name init`
 
 generator client {

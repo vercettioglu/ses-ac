@@ -4,16 +4,16 @@ import { ServiceWorkerRegister } from '@/components/service-worker-register';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Ses Aç — Bölgenizdeki duyuruları anında alın',
-    template: '%s · Ses Aç',
+    default: 'Susma — Bölgenizdeki duyuruları anında alın',
+    template: '%s · Susma',
   },
   description: 'Bölgenizdeki önemli duyuruları anında alın. Sade, hızlı, izinli bildirimler.',
-  applicationName: 'Ses Aç',
+  applicationName: 'Susma',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Ses Aç',
+    title: 'Susma',
   },
   other: {
     // Modern muadili (apple-mobile-web-app-capable deprecation uyarısını giderir)

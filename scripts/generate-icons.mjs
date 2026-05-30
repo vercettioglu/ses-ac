@@ -1,5 +1,5 @@
 // Bağımsız PNG ikon üretici (ek bağımlılık yok, sadece Node zlib).
-// "Ses Aç" markası için kırmızı zemin + beyaz yayın dalgası deseni.
+// "Susma" markası için kırmızı zemin + beyaz yayın dalgası deseni.
 // Kullanım: npm run icons
 import zlib from 'node:zlib';
 import fs from 'node:fs';

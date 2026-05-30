@@ -16,7 +16,7 @@ export const env = {
     return process.env.VAPID_PRIVATE_KEY ?? '';
   },
   get vapidSubject() {
-    return process.env.VAPID_SUBJECT ?? 'mailto:admin@ses.ac';
+    return process.env.VAPID_SUBJECT ?? 'mailto:admin@susma.org';
   },
   get appUrl() {
     return process.env.APP_URL ?? 'http://localhost:3000';

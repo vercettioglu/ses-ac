@@ -307,7 +307,7 @@ export default function SettingsPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Smartphone className="h-4 w-4" />
-                Bildirimler için Ses Aç’ı ana ekranınıza ekleyin.
+                Bildirimler için Susma’yı ana ekranınıza ekleyin.
               </div>
               <Button variant="outline" className="w-full" onClick={() => setSheetOpen(true)}>
                 Nasıl eklerim?
